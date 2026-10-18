@@ -1,4 +1,9 @@
-"""Estilos visuales y hojas de estilo QSS centralizadas para la aplicación Horus Telemetry."""
+"""Estilos visuales y hojas de estilo QSS — Tema Yaqui.
+
+Inspirado en la cultura Yaqui de Sonora, México:
+tierra del desierto, turquesa ceremonial, fuego Pascola,
+nopal verde, atardeceres dorados sobre la Sierra del Bacatete.
+"""
 
 from config.constants import (
     THEME_BG,
@@ -9,6 +14,7 @@ from config.constants import (
     THEME_PANEL_BG,
     THEME_RED,
     THEME_TEXT_MUTED,
+    THEME_ACCENT_GOLD,
 )
 
 MAIN_STYLESHEET: str = f"""
@@ -17,114 +23,93 @@ QMainWindow, QWidget {{
 }}
 QLabel {{
     color: {THEME_TEXT_MUTED};
-    font-family: 'Courier New', monospace;
+    font-family: 'Segoe UI', 'Courier New', monospace;
 }}
 QPushButton {{
     background: {THEME_BUTTON_BG};
-    color: #dddddd;
-    border-radius: 4px;
+    color: {THEME_TEXT_MUTED};
+    border-radius: 5px;
     padding: 8px 16px;
     font-weight: bold;
-    font-family: 'Courier New', monospace;
+    font-family: 'Segoe UI', 'Courier New', monospace;
     border: 1px solid {THEME_BORDER};
 }}
 QPushButton:hover {{
-    background: #2a2a3e;
-    border-color: #5555aa;
+    background: #3d2e22;
+    border-color: {THEME_ACCENT_GOLD};
 }}
 QPushButton:pressed {{
-    background: #111122;
+    background: #1a120b;
+    border-color: {THEME_ACCENT_GOLD}aa;
 }}
 QComboBox {{
     background: {THEME_BUTTON_BG};
-    color: #dddddd;
+    color: {THEME_TEXT_MUTED};
     padding: 6px;
     border: 1px solid {THEME_BORDER};
-    font-family: 'Courier New', monospace;
+    border-radius: 4px;
+    font-family: 'Segoe UI', 'Courier New', monospace;
+}}
+QComboBox:hover {{
+    border-color: {THEME_ACCENT_GOLD};
+}}
+QComboBox QAbstractItemView {{
+    background: {THEME_PANEL_BG};
+    color: {THEME_TEXT_MUTED};
+    selection-background-color: #3d2e22;
+    selection-color: {THEME_ACCENT_GOLD};
+}}
+QToolTip {{
+    background: {THEME_PANEL_BG};
+    color: {THEME_TEXT_MUTED};
+    border: 1px solid {THEME_BORDER};
+    padding: 4px;
+    border-radius: 3px;
 }}
 """
-"""Hoja de estilo principal aplicada a la ventana y componentes base de la interfaz."""
+"""Hoja de estilo principal — Tema Yaqui aplicado a toda la interfaz."""
 
 
 def start_button_style() -> str:
-    """Retorna la hoja de estilo QSS para el botón de inicio de transmisión ('START').
-
-    Returns:
-        Cadena con la propiedad de estilo QSS en tonos verdes.
-    """
-    return f"background: #0d2b0d; color: {THEME_GREEN}; border-color: {THEME_GREEN}44;"
+    """Botón START — verde nopal sobre tierra."""
+    return f"background: #1e2e16; color: {THEME_GREEN}; border-color: {THEME_GREEN}66;"
 
 
 def stop_button_style() -> str:
-    """Retorna la hoja de estilo QSS para el botón de detención de transmisión ('STOP').
-
-    Returns:
-        Cadena con la propiedad de estilo QSS en tonos rojos de alerta.
-    """
-    return f"background: #2b0d0d; color: {THEME_RED}; border-color: {THEME_RED}44;"
+    """Botón STOP — rojo Pascola, fuego ceremonial."""
+    return f"background: #2e1614; color: {THEME_RED}; border-color: {THEME_RED}66;"
 
 
 def unit_button_style() -> str:
-    """Retorna la hoja de estilo QSS para el botón selector de unidades de fuerza (N / kg).
-
-    Returns:
-        Cadena con la propiedad de estilo QSS en tonos cyan.
-    """
-    return f"background: #1a1a3a; color: {THEME_CYAN}; border-color: {THEME_CYAN}44;"
+    """Botón de unidades — turquesa ceremonial."""
+    return f"background: #1a2e2a; color: {THEME_CYAN}; border-color: {THEME_CYAN}66;"
 
 
 def arm_button_style() -> str:
-    """Retorna la hoja de estilo QSS para el botón de armado del sistema de ignición ('ARM').
-
-    Returns:
-        Cadena con la propiedad de estilo QSS en tonos ámbar de precaución.
-    """
-    return "background: #2b1a00; color: #ffaa00; border: 2px solid #ffaa0066; padding: 10px 24px;"
+    """Botón ARM — dorado sol, precaución."""
+    return f"background: #2e2510; color: {THEME_ACCENT_GOLD}; border: 2px solid {THEME_ACCENT_GOLD}88; padding: 10px 24px;"
 
 
 def fire_button_enabled_style() -> str:
-    """Retorna la hoja de estilo QSS para el botón de disparo ('FIRE') habilitado.
-
-    Returns:
-        Cadena con la propiedad de estilo QSS en rojo brillante de ignición inminente.
-    """
-    return "background: #4a0000; color: #ff2222; border: 2px solid #ff2222; padding: 10px 24px;"
+    """Botón FIRE habilitado — rojo fuego vivo."""
+    return f"background: #4a1510; color: {THEME_RED}; border: 2px solid {THEME_RED}; padding: 10px 24px;"
 
 
 def fire_button_disabled_style() -> str:
-    """Retorna la hoja de estilo QSS para el botón de disparo ('FIRE') deshabilitado en modo seguro.
-
-    Returns:
-        Cadena con la propiedad de estilo QSS atenuado en reposo.
-    """
-    return "background: #1a0000; color: #444444; border: 2px solid #44444444; padding: 10px 24px;"
+    """Botón FIRE deshabilitado — ceniza apagada."""
+    return "background: #1a1210; color: #4a3a30; border: 2px solid #4a3a3044; padding: 10px 24px;"
 
 
 def connected_status_style() -> str:
-    """Retorna la hoja de estilo QSS para la etiqueta de estado cuando el puerto está conectado.
-
-    Returns:
-        Cadena de estilo QSS con tipografía verde y en negrita.
-    """
+    """Estado conectado — verde nopal brillante."""
     return f"color: {THEME_GREEN}; font-size: 11px; font-weight: bold;"
 
 
 def disconnected_status_style() -> str:
-    """Retorna la hoja de estilo QSS para la etiqueta de estado cuando el puerto está desconectado.
-
-    Returns:
-        Cadena de estilo QSS con tipografía roja y en negrita.
-    """
+    """Estado desconectado — rojo Pascola."""
     return f"color: {THEME_RED}; font-size: 11px; font-weight: bold;"
 
 
 def kpi_card_style(accent_color: str = THEME_CYAN) -> str:
-    """Retorna la hoja de estilo QSS para tarjetas de métricas numéricas (KpiCard).
-
-    Args:
-        accent_color: Código de color hexadecimal para el borde de acento.
-
-    Returns:
-        Cadena de estilo QSS con fondo oscuro y borde translúcido según el color provisto.
-    """
+    """Tarjeta KPI — arcilla con borde de acento translúcido."""
     return f"background: {THEME_PANEL_BG}; border: 1px solid {accent_color}44; border-radius: 8px;"

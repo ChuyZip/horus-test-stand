@@ -42,26 +42,26 @@ class TrimToolbar(QWidget):
 
         lbl_mode = QLabel("✂  MODO RECORTE")
         lbl_mode.setStyleSheet(
-            "color:#ffaa00;font-size:10px;font-weight:bold;letter-spacing:2px;"
+            "color:#d4a843;font-size:10px;font-weight:bold;letter-spacing:2px;"
         )
 
         self.lbl_range = QLabel("Selecciona un rango arrastrando las lineas en la grafica...")
         self.lbl_range.setStyleSheet(
-            "color:#00e5ff;font-size:11px;"
-            "background:#111133;padding:4px 10px;border-radius:4px;"
+            "color:#40c4aa;font-size:11px;"
+            "background:#261c13;padding:4px 10px;border-radius:4px;"
         )
 
         self.btn_export = QPushButton("💾  Exportar recorte")
         self.btn_export.setStyleSheet(
-            "background:#0d2b0d;color:#00ff88;"
-            "border-color:#00ff8844;padding:6px 14px;"
+            "background:#1e2e16;color:#6dbf4a;"
+            "border-color:#6dbf4a44;padding:6px 14px;"
         )
         self.btn_export.clicked.connect(self.export_trim_requested.emit)
 
         self.btn_cancel = QPushButton("✕  Cancelar recorte")
         self.btn_cancel.setStyleSheet(
-            "background:#2b0d0d;color:#ff4444;"
-            "border-color:#ff444444;padding:6px 14px;"
+            "background:#2e1614;color:#c4342d;"
+            "border-color:#c4342d44;padding:6px 14px;"
         )
         self.btn_cancel.clicked.connect(self.cancel_trim_requested.emit)
 

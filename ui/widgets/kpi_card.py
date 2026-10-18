@@ -12,7 +12,7 @@ class KpiCard(QFrame):
         self,
         label: str,
         unit: str,
-        color: str = "#00e5ff",
+        color: str = "#40c4aa",
         tooltip: str = "",
         parent=None,
     ) -> None:
@@ -30,7 +30,7 @@ class KpiCard(QFrame):
         if tooltip:
             self.setToolTip(tooltip)
         self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setStyleSheet(f"KpiCard{{background:#1a1a2e;border:1px solid {color}44;border-radius:8px;}}")
+        self.setStyleSheet(f"KpiCard{{background:#261c13;border:1px solid {color}44;border-radius:8px;}}")
         
         lay = QVBoxLayout(self)
         lay.setContentsMargins(12, 8, 12, 8)
@@ -38,7 +38,6 @@ class KpiCard(QFrame):
         
         self.lbl_title = QLabel(label.upper())
         self.lbl_title.setStyleSheet(f"color:{color};font-size:10px;letter-spacing:2px;")
-        self.lbl_title.setToolTip(tooltip)
         
         self.lbl_value = QLabel("—")
         self.lbl_value.setStyleSheet("color:#ffffff;font-size:24px;font-weight:bold;")
@@ -46,6 +45,11 @@ class KpiCard(QFrame):
         self.lbl_unit = QLabel(unit)
         self.lbl_unit.setStyleSheet(f"color:{color}88;font-size:11px;")
         
+        if tooltip:
+            self.lbl_title.setToolTip(tooltip)
+            self.lbl_value.setToolTip(tooltip)
+            self.lbl_unit.setToolTip(tooltip)
+
         lay.addWidget(self.lbl_title)
         lay.addWidget(self.lbl_value)
         lay.addWidget(self.lbl_unit)

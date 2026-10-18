@@ -45,15 +45,15 @@ class ControlBar(QWidget):
         self.btn_connect.clicked.connect(self.connect_requested.emit)
         
         self.btn_start = QPushButton("▶ START")
-        self.btn_start.setStyleSheet("background:#0d2b0d;color:#00ff88;border-color:#00ff8844;")
+        self.btn_start.setStyleSheet("background:#1e2e16;color:#6dbf4a;border-color:#6dbf4a44;")
         self.btn_start.clicked.connect(self.start_requested.emit)
         
         self.btn_stop = QPushButton("■ STOP")
-        self.btn_stop.setStyleSheet("background:#2b0d0d;color:#ff4444;border-color:#ff444444;")
+        self.btn_stop.setStyleSheet("background:#2e1614;color:#c4342d;border-color:#c4342d44;")
         self.btn_stop.clicked.connect(self.stop_requested.emit)
         
         self.btn_unit = QPushButton("UNIDAD: N")
-        self.btn_unit.setStyleSheet("background:#1a1a3a;color:#00e5ff;border-color:#00e5ff44;")
+        self.btn_unit.setStyleSheet("background:#2e2118;color:#40c4aa;border-color:#40c4aa44;")
         self.btn_unit.clicked.connect(self.unit_toggled.emit)
         
         self.btn_tare = QPushButton("⊙ TARAR")
@@ -66,7 +66,7 @@ class ControlBar(QWidget):
         self.btn_export.clicked.connect(self.export_requested.emit)
 
         self.btn_analysis = QPushButton("ANALIZAR")
-        self.btn_analysis.setStyleSheet("background:#102a30;color:#00e5ff;border-color:#00e5ff44;")
+        self.btn_analysis.setStyleSheet("background:#2e2510;color:#40c4aa;border-color:#40c4aa44;")
         self.btn_analysis.clicked.connect(self.analysis_requested.emit)
         
         ctrl.addWidget(self.port_combo)
@@ -125,3 +125,29 @@ class ControlBar(QWidget):
         """
         self.port_combo.setVisible(not is_wifi)
         self.btn_refresh.setVisible(not is_wifi)
+
+    def set_recording_state(self, is_recording: bool) -> None:
+        """
+        Actualiza el estilo visual de los botones START y STOP
+        para que sea evidente si el sistema esta grabando.
+        """
+        if is_recording:
+            # Grabando: START deshabilitado y apagado, STOP en rojo brillante y activo
+            self.btn_start.setEnabled(False)
+            self.btn_start.setStyleSheet(
+                "background:#1a120b;color:#4a3a30;border:1px solid #4a3a30;"
+            )
+            self.btn_stop.setEnabled(True)
+            self.btn_stop.setStyleSheet(
+                "background:#c4342d;color:#ffffff;border:2px solid #ffaaaa;font-weight:bold;"
+            )
+        else:
+            # Detenido: START verde brillante y activo, STOP deshabilitado y apagado
+            self.btn_start.setEnabled(True)
+            self.btn_start.setStyleSheet(
+                "background:#6dbf4a;color:#1a120b;border:2px solid #aaffaa;font-weight:bold;"
+            )
+            self.btn_stop.setEnabled(False)
+            self.btn_stop.setStyleSheet(
+                "background:#1a120b;color:#4a3a30;border:1px solid #4a3a30;"
+            )

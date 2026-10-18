@@ -19,13 +19,13 @@ from persistence.csv_exporter import export_telemetry_csv
 logger = logging.getLogger(__name__)
 
 _STYLE = (
-    "QDialog{background:#0d0d1a;}"
-    "QLabel{color:#cccccc;font-family:'Courier New',monospace;}"
-    "QPushButton{background:#1e1e2e;color:#dddddd;border-radius:4px;"
+    "QDialog{background:#1a120b;}"
+    "QLabel{color:#c8b8a0;font-family:'Courier New',monospace;}"
+    "QPushButton{background:#2e2118;color:#dddddd;border-radius:4px;"
     "padding:8px 16px;font-weight:bold;"
-    "font-family:'Courier New',monospace;border:1px solid #333355;}"
-    "QPushButton:hover{background:#2a2a3e;border-color:#5555aa;}"
-    "QPushButton:pressed{background:#111122;}"
+    "font-family:'Courier New',monospace;border:1px solid #5a4535;}"
+    "QPushButton:hover{background:#3d2e22;border-color:#5555aa;}"
+    "QPushButton:pressed{background:#1a120b;}"
 )
 
 
@@ -74,22 +74,22 @@ class ExportConfirmDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
 
         lbl_title = QLabel("⚠  Ya existe un CSV autoguardado")
-        lbl_title.setStyleSheet("color:#ffaa00;font-size:14px;font-weight:bold;")
+        lbl_title.setStyleSheet("color:#d4a843;font-size:14px;font-weight:bold;")
         layout.addWidget(lbl_title)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("color:#222244;")
+        sep.setStyleSheet("color:#3a2a1e;")
         layout.addWidget(sep)
 
         lbl_info = QLabel("Archivo autoguardado activo:")
-        lbl_info.setStyleSheet("color:#888899;font-size:10px;")
+        lbl_info.setStyleSheet("color:#8a7a6a;font-size:10px;")
         layout.addWidget(lbl_info)
 
         lbl_path = QLabel(self._autosave_filepath)
         lbl_path.setStyleSheet(
-            "color:#00e5ff;font-size:10px;"
-            "background:#111133;padding:6px;border-radius:4px;"
+            "color:#40c4aa;font-size:10px;"
+            "background:#261c13;padding:6px;border-radius:4px;"
         )
         lbl_path.setWordWrap(True)
         lbl_path.setTextInteractionFlags(
@@ -98,7 +98,7 @@ class ExportConfirmDialog(QDialog):
         layout.addWidget(lbl_path)
 
         lbl_q = QLabel("¿Este CSV ya fue guardado. Estas seguro que quieres reescribirlo?")
-        lbl_q.setStyleSheet("color:#cccccc;margin-top:6px;")
+        lbl_q.setStyleSheet("color:#c8b8a0;margin-top:6px;")
         layout.addWidget(lbl_q)
 
         btn_layout = QHBoxLayout()
@@ -106,19 +106,19 @@ class ExportConfirmDialog(QDialog):
 
         self.btn_new = QPushButton("✔  Guardar con nuevo nombre")
         self.btn_new.setStyleSheet(
-            "background:#0d2b0d;color:#00ff88;border-color:#00ff8844;"
+            "background:#1e2e16;color:#6dbf4a;border-color:#6dbf4a44;"
         )
         self.btn_new.clicked.connect(self._save_new_name)
 
         self.btn_overwrite = QPushButton("Si, Reescribir")
         self.btn_overwrite.setStyleSheet(
-            "background:#2b1a00;color:#ffaa00;border-color:#ffaa0044;"
+            "background:#3d2a10;color:#d4a843;border-color:#d4a84344;"
         )
         self.btn_overwrite.clicked.connect(self._overwrite)
 
         self.btn_cancel = QPushButton("No, Cancelar")
         self.btn_cancel.setStyleSheet(
-            "background:#2b0d0d;color:#ff4444;border-color:#ff444444;"
+            "background:#2e1614;color:#c4342d;border-color:#c4342d44;"
         )
         self.btn_cancel.clicked.connect(self.reject)
 

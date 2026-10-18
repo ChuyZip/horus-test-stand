@@ -31,13 +31,13 @@ class HeaderBar(QWidget):
             self.lbl_logo.setPixmap(pix.scaledToHeight(52, Qt.TransformationMode.SmoothTransformation))
         else:
             self.lbl_logo.setText("HORUS SPACE LAB")
-            self.lbl_logo.setStyleSheet("color:#00e5ff;font-size:22px;font-weight:bold;")
+            self.lbl_logo.setStyleSheet("color:#40c4aa;font-size:22px;font-weight:bold;")
 
         lbl_sys = QLabel("SISTEMA DE TELEMETRÍA  //  BANCO DE PRUEBAS")
         lbl_sys.setStyleSheet("color:#5566aa;font-size:11px;letter-spacing:3px;")
         
         self.lbl_status = QLabel("● DESCONECTADO")
-        self.lbl_status.setStyleSheet("color:#ff4444;font-size:11px;font-weight:bold;")
+        self.lbl_status.setStyleSheet("color:#c4342d;font-size:11px;font-weight:bold;")
         self.lbl_status.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         
         hdr.addWidget(self.lbl_logo)
@@ -55,7 +55,7 @@ class HeaderBar(QWidget):
         """
         if connected:
             self.lbl_status.setText("● CONECTADO")
-            self.lbl_status.setStyleSheet("color:#00ff88;font-size:11px;font-weight:bold;")
+            self.lbl_status.setStyleSheet("color:#6dbf4a;font-size:11px;font-weight:bold;")
         else:
             self.lbl_status.setText("● DESCONECTADO")
-            self.lbl_status.setStyleSheet("color:#ff4444;font-size:11px;font-weight:bold;")
+            self.lbl_status.setStyleSheet("color:#c4342d;font-size:11px;font-weight:bold;")

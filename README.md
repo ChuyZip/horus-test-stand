@@ -12,6 +12,7 @@ Aplicacion de escritorio para adquirir, visualizar y analizar telemetria de empu
 - Tare de la celda de carga, recorte de intervalos y exportacion del rango seleccionado con impulso recalculado.
 - Autoguardado CSV con carpeta seleccionable y persistente.
 - Ventana `ANALIZAR` para cargar un ensayo A y un ensayo B, superponer sus curvas y calcular cambios porcentuales de empuje maximo e impulso.
+- Ventana `VOLT/KG` para caracterizar la celda con voltaje en mV, peso y cuentas crudas del HX711, incluyendo curvas contra tiempo y respuesta voltaje-peso.
 - Ignicion protegida: requiere armar el sistema y confirmar un codigo temporal de cuatro digitos antes de enviar `FIRE`.
 - Pantalla de inicio con identidad de Horus Space Lab.
 
@@ -46,12 +47,15 @@ python -m pytest -q
 4. Inicia la adquisicion; el autoguardado creara un CSV en la carpeta elegida con `CARPETA CSV`.
 5. Exporta el ensayo completo o activa el recorte para guardar solo una parte de la corrida.
 6. Abre `ANALIZAR`, carga los CSV en A y B y revisa las curvas y las variaciones de rendimiento.
+7. Para caracterizar la celda, abre `VOLT/KG` antes de conectar por serie; por WiFi, los datagramas extendidos de 16 bytes se detectan automaticamente.
 
 ## Formato de telemetria
 
 Los paquetes binarios de telemetria contienen el empuje como `float` de 4 bytes y un numero de secuencia `uint32` de 4 bytes. El numero de secuencia permite detectar paquetes perdidos. En modo LoRa se agrega el RSSI.
 
 Los CSV exportados incluyen tiempo, empuje en Newtons y kilogramos-fuerza. Los CSV de recorte tambien incluyen el impulso acumulado recalculado desde el inicio del intervalo elegido.
+
+El modo `VOLT/KG` recibe el paquete extendido `<ffiI`: peso en kg, voltaje en mV, cuenta cruda del HX711 y secuencia. Sus CSV incluyen esas cinco columnas junto con el tiempo de captura.
 
 ## Estructura
 

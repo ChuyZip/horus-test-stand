@@ -29,7 +29,7 @@ class IgnitionPanel(QWidget):
         ign_row.setContentsMargins(0, 0, 0, 0)
         
         self.btn_arm = QPushButton("ARM")
-        self.btn_arm.setStyleSheet("background:#2b1a00;color:#ffaa00;border:2px solid #ffaa0066;padding:10px 24px;")
+        self.btn_arm.setStyleSheet("background:#3d2a10;color:#d4a843;border:2px solid #d4a84366;padding:10px 24px;")
         self.btn_arm.clicked.connect(self.toggle_arm)
         
         self.btn_fire = QPushButton("FIRE")
@@ -38,7 +38,7 @@ class IgnitionPanel(QWidget):
         self.btn_fire.clicked.connect(self._request_fire)
         
         self.lbl_arm_status = QLabel("SISTEMA: SAFE")
-        self.lbl_arm_status.setStyleSheet("color:#ff4444;")
+        self.lbl_arm_status.setStyleSheet("color:#c4342d;")
         
         ign_row.addWidget(self.btn_arm)
         ign_row.addWidget(self.btn_fire)
@@ -66,20 +66,20 @@ class IgnitionPanel(QWidget):
     def _arm(self) -> None:
         """Arma el sistema habilitando el disparo."""
         self._armed = True
-        self.btn_arm.setStyleSheet("background:#ffaa00;color:#000000;border:2px solid #ffaa00;padding:10px 24px;font-weight:bold;")
+        self.btn_arm.setStyleSheet("background:#d4a843;color:#000000;border:2px solid #d4a843;padding:10px 24px;font-weight:bold;")
         self.btn_fire.setEnabled(True)
-        self.btn_fire.setStyleSheet("background:#2b0000;color:#ff4444;border:2px solid #ff4444;padding:10px 24px;font-weight:bold;")
+        self.btn_fire.setStyleSheet("background:#2b0000;color:#c4342d;border:2px solid #c4342d;padding:10px 24px;font-weight:bold;")
         self.lbl_arm_status.setText("SISTEMA: ARMED")
-        self.lbl_arm_status.setStyleSheet("color:#ffaa00;font-weight:bold;")
+        self.lbl_arm_status.setStyleSheet("color:#d4a843;font-weight:bold;")
 
     def disarm(self) -> None:
         """Desarma el sistema, bloqueando el disparo."""
         self._armed = False
-        self.btn_arm.setStyleSheet("background:#2b1a00;color:#ffaa00;border:2px solid #ffaa0066;padding:10px 24px;")
+        self.btn_arm.setStyleSheet("background:#3d2a10;color:#d4a843;border:2px solid #d4a84366;padding:10px 24px;")
         self.btn_fire.setEnabled(False)
         self.btn_fire.setStyleSheet("background:#1a0000;color:#444444;border:2px solid #44444444;padding:10px 24px;")
         self.lbl_arm_status.setText("SISTEMA: SAFE")
-        self.lbl_arm_status.setStyleSheet("color:#ff4444;")
+        self.lbl_arm_status.setStyleSheet("color:#c4342d;")
 
     def _request_fire(self) -> None:
         """Exige un codigo temporal antes de emitir la orden de ignicion."""

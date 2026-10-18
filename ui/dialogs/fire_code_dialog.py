@@ -14,9 +14,9 @@ class FireCodeDialog(QDialog):
         self.setModal(True)
         self.setFixedWidth(390)
         self.setStyleSheet(
-            "QDialog{background:#160808;}"
+            "QDialog{background:#1a120b;}"
             "QLabel{color:#dddddd;font-family:'Courier New',monospace;}"
-            "QLineEdit{background:#090303;color:#ffffff;border:1px solid #ff4444;"
+            "QLineEdit{background:#1a120b;color:#ffffff;border:1px solid #c4342d;"
             "padding:10px;font-size:20px;font-family:'Courier New',monospace;}"
         )
         self._build_ui()
@@ -27,7 +27,7 @@ class FireCodeDialog(QDialog):
         layout.setSpacing(14)
 
         title = QLabel("CONFIRMACION DE IGNICION")
-        title.setStyleSheet("color:#ff4444;font-size:15px;font-weight:bold;")
+        title.setStyleSheet("color:#c4342d;font-size:15px;font-weight:bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
@@ -39,7 +39,7 @@ class FireCodeDialog(QDialog):
         code_label = QLabel(self._code)
         code_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         code_label.setStyleSheet(
-            "color:#ffffff;background:#300000;border:1px solid #ff4444;"
+            "color:#ffffff;background:#2e1614;border:1px solid #c4342d;"
             "padding:12px;font-family:'Courier New',monospace;font-size:30px;font-weight:bold;"
         )
         layout.addWidget(code_label)
@@ -53,7 +53,7 @@ class FireCodeDialog(QDialog):
 
         self.error_label = QLabel("")
         self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.error_label.setStyleSheet("color:#ff8888;")
+        self.error_label.setStyleSheet("color:#d4567a;")
         layout.addWidget(self.error_label)
 
         actions = QHBoxLayout()
@@ -61,7 +61,7 @@ class FireCodeDialog(QDialog):
         cancel.clicked.connect(self.reject)
         confirm = QPushButton("CONFIRMAR FIRE")
         confirm.setStyleSheet(
-            "background:#4a0000;color:#ffdddd;border:1px solid #ff4444;"
+            "background:#4a1510;color:#ffdddd;border:1px solid #c4342d;"
             "padding:8px 16px;font-weight:bold;"
         )
         confirm.clicked.connect(self._confirm)

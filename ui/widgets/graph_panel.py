@@ -42,13 +42,13 @@ class GraphPanel(QWidget):
         self.graph_thrust = pg.PlotWidget()
         self.graph_impulse = pg.PlotWidget()
 
-        self._style_graph(self.graph_thrust, "Tiempo (s)", "Empuje (N)", "#00e5ff")
-        self._style_graph(self.graph_impulse, "Tiempo (s)", "Impulso (N\u00b7s)", "#00ff88")
+        self._style_graph(self.graph_thrust, "Tiempo (s)", "Empuje (N)", "#40c4aa")
+        self._style_graph(self.graph_impulse, "Tiempo (s)", "Impulso (N\u00b7s)", "#6dbf4a")
 
-        self.curve_thrust = self.graph_thrust.plot(pen=pg.mkPen("#00e5ff", width=2))
-        self.curve_impulse = self.graph_impulse.plot(pen=pg.mkPen("#00ff88", width=2))
-        self.curve_thrust_b = self.graph_thrust.plot(pen=pg.mkPen("#ff9f1c", width=2))
-        self.curve_impulse_b = self.graph_impulse.plot(pen=pg.mkPen("#ff6b6b", width=2))
+        self.curve_thrust = self.graph_thrust.plot(name="Ensayo A", pen=pg.mkPen("#40c4aa", width=2))
+        self.curve_impulse = self.graph_impulse.plot(name="Ensayo A", pen=pg.mkPen("#6dbf4a", width=2))
+        self.curve_thrust_b = self.graph_thrust.plot(name="Ensayo B", pen=pg.mkPen("#e8922f", width=2))
+        self.curve_impulse_b = self.graph_impulse.plot(name="Ensayo B", pen=pg.mkPen("#d4567a", width=2))
 
         self._hover_overlays: dict[str, tuple[pg.InfiniteLine, pg.InfiniteLine, pg.TextItem]] = {}
         self._install_hover_feedback(self.graph_thrust, "thrust")
@@ -60,10 +60,17 @@ class GraphPanel(QWidget):
 
     def _style_graph(self, gw: pg.PlotWidget, xlabel: str, ylabel: str, color: str) -> None:
         """Aplica estilo visual al widget del grafico."""
-        gw.setBackground("#0d0d1a")
-        gw.showGrid(x=True, y=True, alpha=0.15)
+        gw.setBackground("#1a120b")
+        gw.showGrid(x=True, y=True, alpha=0.12)
         gw.setLabel("left", ylabel, color=color)
-        gw.setLabel("bottom", xlabel, color="#445566")
+        gw.setLabel("bottom", xlabel, color="#8a7a6a")
+
+    def show_legends(self) -> None:
+        """Muestra las leyendas en las graficas (solo para analisis)."""
+        if not getattr(self, "_legends_shown", False):
+            self.graph_thrust.addLegend(offset=(10, 10))
+            self.graph_impulse.addLegend(offset=(10, 10))
+            self._legends_shown = True
 
     def update_thrust(self, time_data: list[float], thrust_data: list[float]) -> None:
         """Actualiza el grafico de empuje con nuevos datos."""
@@ -73,13 +80,13 @@ class GraphPanel(QWidget):
     def set_y_labels(self, is_kg: bool) -> None:
         """Actualiza las etiquetas del eje Y segun la unidad seleccionada."""
         if is_kg:
-            self.graph_thrust.setLabel("left", "Empuje (kg)", color="#00e5ff")
-            self.graph_impulse.setLabel("left", "Impulso (kg·s)", color="#00ff88")
+            self.graph_thrust.setLabel("left", "Empuje (kg)", color="#40c4aa")
+            self.graph_impulse.setLabel("left", "Impulso (kg·s)", color="#6dbf4a")
             self._thrust_unit = "kg"
             self._impulse_unit = "kg*s"
         else:
-            self.graph_thrust.setLabel("left", "Empuje (N)", color="#00e5ff")
-            self.graph_impulse.setLabel("left", "Impulso (N·s)", color="#00ff88")
+            self.graph_thrust.setLabel("left", "Empuje (N)", color="#40c4aa")
+            self.graph_impulse.setLabel("left", "Impulso (N·s)", color="#6dbf4a")
             self._thrust_unit = "N"
             self._impulse_unit = "N*s"
 
@@ -154,7 +161,7 @@ class GraphPanel(QWidget):
         self._trim_region = pg.LinearRegionItem(
             values=[r0, r1],
             brush=pg.mkBrush(0, 255, 136, 30),
-            pen=pg.mkPen("#00ff88", width=1, style=pg.QtCore.Qt.PenStyle.DashLine),
+            pen=pg.mkPen("#6dbf4a", width=1, style=pg.QtCore.Qt.PenStyle.DashLine),
             movable=True,
         )
         self._trim_region.sigRegionChanged.connect(self._on_region_changed)

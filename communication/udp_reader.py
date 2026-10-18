@@ -25,9 +25,14 @@ class UdpReader(QThread):
     """
 
     data_received = pyqtSignal(float, int, int)
+    characterization_received = pyqtSignal(float, float, int, int)
     disconnected = pyqtSignal()
 
-    def __init__(self, port: int = 8888) -> None:
+    def __init__(
+        self,
+        port: int = 8888,
+        mode: ConnectionMode = ConnectionMode.WIFI,
+    ) -> None:
         """
         Inicializa el lector UDP.
 
@@ -39,7 +44,7 @@ class UdpReader(QThread):
         self.running = False
         self.sock: socket.socket | None = None
         self.last_client_addr = None
-        self.config = PROTOCOL_CONFIGS[ConnectionMode.WIFI]
+        self.config = PROTOCOL_CONFIGS[mode]
 
     def run(self) -> None:
         """Bucle principal de escucha UDP."""
@@ -57,11 +62,32 @@ class UdpReader(QThread):
                 try:
                     data, addr = self.sock.recvfrom(1024)
                     self.last_client_addr = addr  # Guardar para enviar respuestas
-                    
-                    if len(data) >= self.config.packet_size:
+
+                    # UDP conserva los limites del datagrama, por lo que un paquete
+                    # extendido de 16 bytes se puede reconocer sin ambiguedad.
+                    if len(data) == 16:
+                        weight_kg, voltage_mv, raw_count, seq = struct.unpack("<ffiI", data)
+                        self.characterization_received.emit(
+                            float(weight_kg),
+                            float(voltage_mv),
+                            int(raw_count),
+                            int(seq),
+                        )
+                    elif len(data) >= self.config.packet_size:
                         raw = data[:self.config.packet_size]
-                        newtons, seq = struct.unpack(self.config.struct_format, raw)
-                        self.data_received.emit(float(newtons), int(seq), RSSI_NOT_AVAILABLE)
+                        if self.config.is_characterization:
+                            weight_kg, voltage_mv, raw_count, seq = struct.unpack(
+                                self.config.struct_format, raw
+                            )
+                            self.characterization_received.emit(
+                                float(weight_kg),
+                                float(voltage_mv),
+                                int(raw_count),
+                                int(seq),
+                            )
+                        else:
+                            newtons, seq = struct.unpack(self.config.struct_format, raw)
+                            self.data_received.emit(float(newtons), int(seq), RSSI_NOT_AVAILABLE)
                 except socket.timeout:
                     continue
         except Exception as e:

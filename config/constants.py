@@ -37,40 +37,53 @@ PACKET_SIZE_LORA: int = 9
 CONFIG_FILE: str = os.path.join(os.path.expanduser("~"), ".horus_config.json")
 """Ruta al archivo de configuración de usuario en formato JSON."""
 
-# Paleta de colores temáticos de la interfaz (Dark Aerospace Theme)
-THEME_BG: str = "#0d0d1a"
-"""Color de fondo principal de la aplicación."""
+# Paleta de colores temáticos — Estilo Yaqui (Sonora, México)
+# Inspirada en: tierra del desierto, fuego ceremonial, turquesa,
+# ocre/dorado, nopal verde y atardeceres sobre la Sierra del Bacatete.
 
-THEME_CYAN: str = "#00e5ff"
-"""Color cyan primario para telemetría activa y empuje instantáneo."""
+THEME_BG: str = "#1a120b"
+"""Fondo principal — tierra oscura del desierto nocturno."""
 
-THEME_GREEN: str = "#00ff88"
-"""Color verde para estados conectados, impulso acumulado y botón de inicio."""
+THEME_CYAN: str = "#40c4aa"
+"""Turquesa ceremonial — piedra turquesa Yaqui, datos primarios de empuje."""
 
-THEME_RED: str = "#ff4444"
-"""Color rojo para estados desconectados, botones de parada y fuego."""
+THEME_GREEN: str = "#6dbf4a"
+"""Verde nopal — crecimiento, conexión activa, impulso acumulado."""
 
-THEME_ORANGE: str = "#ff9800"
-"""Color naranja para empuje máximo y estados de advertencia."""
+THEME_RED: str = "#c4342d"
+"""Rojo Pascola — fuego de la danza del venado, alarma y parada."""
 
-THEME_PINK: str = "#ff4488"
-"""Color rosa/magenta para la clasificación de motor NAR."""
+THEME_ORANGE: str = "#e8922f"
+"""Naranja atardecer — empuje máximo, sol sobre el desierto de Sonora."""
 
-THEME_PURPLE: str = "#aa88ff"
-"""Color púrpura para telemetría LoRa e intensidad de señal RSSI."""
+THEME_PINK: str = "#d4567a"
+"""Rosa bugambilia — clasificación de motor NAR."""
 
-THEME_WARN_ORANGE: str = "#ff6644"
-"""Color naranja cálido para métricas de paquetes perdidos."""
+THEME_PURPLE: str = "#9b7ec8"
+"""Púrpura crepuscular — señal LoRa y RSSI."""
+
+THEME_WARN_ORANGE: str = "#d4753a"
+"""Ocre cálido — paquetes perdidos y advertencias."""
 
 # Colores secundarios para componentes UI
-THEME_PANEL_BG: str = "#1a1a2e"
-"""Color de fondo para tarjetas de métricas (KpiCard) y paneles secundarios."""
+THEME_PANEL_BG: str = "#261c13"
+"""Fondo de tarjetas KPI — arcilla oscura."""
 
-THEME_BUTTON_BG: str = "#1e1e2e"
-"""Color de fondo predeterminado de botones."""
+THEME_BUTTON_BG: str = "#2e2118"
+"""Fondo de botones — madera de mezquite."""
 
-THEME_BORDER: str = "#333355"
-"""Color de bordes de controles y marcos de ventana."""
+THEME_BORDER: str = "#5a4535"
+"""Bordes — fibra de palma tejida."""
 
-THEME_TEXT_MUTED: str = "#cccccc"
-"""Color de texto secundario y etiquetas informativas."""
+THEME_TEXT_MUTED: str = "#c8b8a0"
+"""Texto secundario — arena del desierto."""
+
+# Colores de acento para gráficas
+THEME_GRAPH_BG: str = "#1a120b"
+"""Fondo de gráficas — mismo que fondo principal."""
+
+THEME_GRID: str = "#3a2a1e"
+"""Líneas de cuadrícula — surcos en la tierra."""
+
+THEME_ACCENT_GOLD: str = "#d4a843"
+"""Dorado sol — acento decorativo, bordes activos."""
