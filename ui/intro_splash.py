@@ -17,7 +17,7 @@ class IntroSplash(QWidget):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.SplashScreen)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setFixedSize(920, 520)
-        self.setStyleSheet("background:#080912;")
+        self.setStyleSheet("background:#1a120b;")
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -41,7 +41,7 @@ class IntroSplash(QWidget):
 
         accent = QFrame()
         accent.setFixedHeight(2)
-        accent.setStyleSheet("background:#00e5ff;border:0;")
+        accent.setStyleSheet("background:#40c4aa;border:0;")
         layout.addWidget(accent)
         layout.addStretch(1)
 

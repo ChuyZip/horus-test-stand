@@ -30,6 +30,7 @@ from ui.widgets.graph_panel import GraphPanel
 from ui.widgets.trim_toolbar import TrimToolbar
 from ui.dialogs.export_dialog import ExportConfirmDialog
 from ui.dialogs.analysis_window import CsvAnalysisWindow
+from ui.dialogs.voltage_characterization_window import VoltageCharacterizationWindow
 from utils.paths import resource_path
 
 logger = logging.getLogger(__name__)
@@ -52,8 +53,9 @@ class RocketDashboard(QMainWindow):
 
         self.conn_mode: ConnectionMode = ConnectionMode.LORA
         self.auto_saver: Optional[AutoSaver] = None
-        self.comm_thread: Optional[SerialReader] = None
+        self.comm_thread: Optional[SerialReader | UdpReader] = None
         self.analysis_window: Optional[CsvAnalysisWindow] = None
+        self.characterization_window: Optional[VoltageCharacterizationWindow] = None
         self._trim_active: bool = False
 
         self.reconnect_timer = QTimer()
@@ -76,6 +78,7 @@ class RocketDashboard(QMainWindow):
         layout.addWidget(self.header)
 
         self.control_bar = ControlBar()
+        self.control_bar.set_recording_state(False)
         layout.addWidget(self.control_bar)
 
         # Fila de KPIs
@@ -113,15 +116,21 @@ class RocketDashboard(QMainWindow):
         self.btn_mode_wifi = QPushButton("Modo WiFi")
         self.btn_mode_wifi.clicked.connect(lambda: self._set_mode(ConnectionMode.WIFI))
 
+        self.btn_voltage = QPushButton("VOLT/KG")
+        self.btn_voltage.setStyleSheet(
+            "background:#3d2a10;color:#e8922f;border-color:#e8922f44;"
+        )
+        self.btn_voltage.clicked.connect(self._open_characterization)
+
         self.btn_trim = QPushButton("\u2702 RECORTAR")
         self.btn_trim.setStyleSheet(
-            "background:#1a1a3a;color:#ffaa00;border-color:#ffaa0044;"
+            "background:#2e2118;color:#d4a843;border-color:#d4a84344;"
         )
         self.btn_trim.clicked.connect(self._toggle_trim_mode)
 
         self.btn_choose_save_folder = QPushButton("CARPETA CSV")
         self.btn_choose_save_folder.setStyleSheet(
-            "background:#102a30;color:#00e5ff;border-color:#00e5ff44;"
+            "background:#2e2510;color:#40c4aa;border-color:#40c4aa44;"
         )
         self.btn_choose_save_folder.clicked.connect(self._choose_save_folder)
 
@@ -129,6 +138,7 @@ class RocketDashboard(QMainWindow):
         mode_layout.addWidget(self.btn_mode_lora)
         mode_layout.addWidget(self.btn_mode_cable)
         mode_layout.addWidget(self.btn_mode_wifi)
+        mode_layout.addWidget(self.btn_voltage)
         mode_layout.addWidget(self.btn_trim)
         mode_layout.addWidget(self.btn_choose_save_folder)
         mode_layout.addStretch()
@@ -182,7 +192,7 @@ class RocketDashboard(QMainWindow):
         """Inicia la conexion de telemetria."""
         if self.conn_mode == ConnectionMode.WIFI:
             port_name = "UDP 8888"
-            self.comm_thread = UdpReader(port=8888)
+            self.comm_thread = UdpReader(port=8888, mode=self.conn_mode)
         else:
             port_name = self.control_bar.get_selected_port()
             if not port_name or "No Ports" in port_name:
@@ -194,13 +204,15 @@ class RocketDashboard(QMainWindow):
 
         try:
             self.comm_thread.data_received.connect(self._on_data)
+            self.comm_thread.characterization_received.connect(self._on_characterization_data)
             self.comm_thread.disconnected.connect(
                 lambda: self._on_disconnected(intentional=False)
             )
             self.comm_thread.start()
             self.header.set_connected(True)
             self.is_recording = False
-            self._iniciar_autoguardado()
+            if self.conn_mode != ConnectionMode.CHARACTERIZATION:
+                self._iniciar_autoguardado()
             logger.info("Conectado a %s.", port_name)
         except Exception as e:
             logger.error("Error al conectar con %s: %s", port_name, e)
@@ -226,6 +238,39 @@ class RocketDashboard(QMainWindow):
             self.comm_thread.send_command(char)
             logger.debug("Comando enviado: %s", char)
 
+    def _on_characterization_data(
+        self, weight_kg: float, voltage_mv: float, raw_count: int, sequence: int
+    ) -> None:
+        """Envía una muestra extendida a la ventana Volt/Kg."""
+        if self.characterization_window is None:
+            self._show_characterization_window()
+        self.characterization_window.add_sample(weight_kg, voltage_mv, raw_count, sequence)
+
+    def _show_characterization_window(self) -> None:
+        if self.characterization_window is None:
+            self.characterization_window = VoltageCharacterizationWindow(self)
+            self.characterization_window.destroyed.connect(
+                lambda: setattr(self, "characterization_window", None)
+            )
+        self.characterization_window.show()
+        self.characterization_window.raise_()
+        self.characterization_window.activateWindow()
+
+    def _open_characterization(self) -> None:
+        """Selecciona el protocolo de 16 bytes y abre sus graficas dedicadas."""
+        if self.comm_thread and self.comm_thread.isRunning():
+            QMessageBox.warning(
+                self,
+                "Desconecta primero",
+                "Desconecta la telemetria actual antes de cambiar a Volt/Kg.",
+            )
+            return
+        # En WiFi, UDP conserva el tamano del datagrama y reconoce los 16 bytes
+        # automaticamente. En serie se requiere seleccionar este formato.
+        if self.conn_mode != ConnectionMode.WIFI:
+            self._set_mode(ConnectionMode.CHARACTERIZATION)
+        self._show_characterization_window()
+
     # ── Grabacion ─────────────────────────────────────────────────────────────
 
     def _start_recording(self) -> None:
@@ -233,6 +278,7 @@ class RocketDashboard(QMainWindow):
         self._clear_data()
         self.is_recording = True
         self.graph_panel.set_interaction(False)  # Bloquea zoom para forzar auto-scroll
+        self.control_bar.set_recording_state(True)
         self._send_cmd("S")
         logger.info("Grabacion iniciada.")
 
@@ -240,6 +286,7 @@ class RocketDashboard(QMainWindow):
         """Detiene la grabacion de datos."""
         self.is_recording = False
         self.graph_panel.set_interaction(True)   # Libera la grafica para poder explorar/recortar
+        self.control_bar.set_recording_state(False)
         self._send_cmd("T")
         logger.info("Grabacion detenida.")
 
@@ -463,7 +510,7 @@ class RocketDashboard(QMainWindow):
         self.trim_toolbar.show()
         self.btn_trim.setText("\u2702 RECORTANDO...")
         self.btn_trim.setStyleSheet(
-            "background:#2b1a00;color:#ffaa00;border:2px solid #ffaa00;"
+            "background:#3d2a10;color:#d4a843;border:2px solid #d4a843;"
         )
         logger.info("Modo recorte activado.")
 
@@ -474,7 +521,7 @@ class RocketDashboard(QMainWindow):
         self.trim_toolbar.hide()
         self.btn_trim.setText("\u2702 RECORTAR")
         self.btn_trim.setStyleSheet(
-            "background:#1a1a3a;color:#ffaa00;border-color:#ffaa0044;"
+            "background:#2e2118;color:#d4a843;border-color:#d4a84344;"
         )
         # Restaurar KPIs a las estadisticas completas de la sesion
         stats = self.engine.get_stats()

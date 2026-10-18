@@ -41,18 +41,18 @@ class CsvAnalysisWindow(QMainWindow):
 
         toolbar = QHBoxLayout()
         self.btn_open_a = QPushButton("CARGAR ENSAYO A")
-        self.btn_open_a.setStyleSheet("background:#102a30;color:#00e5ff;border-color:#00e5ff44;")
+        self.btn_open_a.setStyleSheet("background:#2e2510;color:#40c4aa;border-color:#40c4aa44;")
         self.btn_open_a.clicked.connect(lambda: self._select_csv("A"))
         self.btn_open_b = QPushButton("CARGAR ENSAYO B")
-        self.btn_open_b.setStyleSheet("background:#30200f;color:#ff9f1c;border-color:#ff9f1c44;")
+        self.btn_open_b.setStyleSheet("background:#3d2a10;color:#e8922f;border-color:#e8922f44;")
         self.btn_open_b.clicked.connect(lambda: self._select_csv("B"))
         self.btn_unit = QPushButton("UNIDAD: N")
-        self.btn_unit.setStyleSheet("background:#1a1a3a;color:#00e5ff;border-color:#00e5ff44;")
+        self.btn_unit.setStyleSheet("background:#2e2118;color:#40c4aa;border-color:#40c4aa44;")
         self.btn_unit.clicked.connect(self._toggle_unit)
         self.lbl_file_a = QLabel("ENSAYO A: sin archivo")
-        self.lbl_file_a.setStyleSheet("color:#00e5ff;font-size:11px;")
+        self.lbl_file_a.setStyleSheet("color:#40c4aa;font-size:11px;")
         self.lbl_file_b = QLabel("ENSAYO B: sin archivo")
-        self.lbl_file_b.setStyleSheet("color:#ff9f1c;font-size:11px;")
+        self.lbl_file_b.setStyleSheet("color:#e8922f;font-size:11px;")
         self.lbl_file_a.setWordWrap(True)
         self.lbl_file_b.setWordWrap(True)
 
@@ -66,19 +66,19 @@ class CsvAnalysisWindow(QMainWindow):
 
         kpis = QHBoxLayout()
         self.kpi_max_a = KpiCard(
-            "MAX A", "N", "#00e5ff", "Empuje maximo del ensayo A, usado como referencia."
+            "MAX A", "N", "#40c4aa", "Empuje maximo del ensayo A, usado como referencia."
         )
         self.kpi_max_b = KpiCard(
-            "MAX B", "N", "#ff9f1c", "Empuje maximo del ensayo B, el candidato a comparar."
+            "MAX B", "N", "#e8922f", "Empuje maximo del ensayo B, el candidato a comparar."
         )
         self.kpi_max_change = KpiCard(
             "CAMBIO MAX", "%", "#ffffff", "Variacion porcentual del empuje maximo de B respecto a A."
         )
         self.kpi_impulse_a = KpiCard(
-            "IMPULSO A", "Ns", "#00ff88", "Impulso total acumulado del ensayo A."
+            "IMPULSO A", "Ns", "#6dbf4a", "Impulso total acumulado del ensayo A."
         )
         self.kpi_impulse_b = KpiCard(
-            "IMPULSO B", "Ns", "#ff6b6b", "Impulso total acumulado del ensayo B."
+            "IMPULSO B", "Ns", "#c4342d", "Impulso total acumulado del ensayo B."
         )
         self.kpi_impulse_change = KpiCard(
             "CAMBIO IMP", "%", "#ffffff", "Variacion porcentual del impulso total de B respecto a A."
@@ -95,6 +95,7 @@ class CsvAnalysisWindow(QMainWindow):
         layout.addLayout(kpis)
 
         self.graph_panel = GraphPanel()
+        self.graph_panel.show_legends()
         layout.addWidget(self.graph_panel, 1)
 
     def _select_csv(self, slot: str) -> None:

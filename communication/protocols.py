@@ -18,6 +18,7 @@ class ConnectionMode(str, Enum):
     CABLE = "cable"
     LORA = "lora"
     WIFI = "wifi"
+    CHARACTERIZATION = "characterization"
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class ProtocolConfig:
     packet_size: int
     struct_format: str
     has_rssi: bool
+    is_characterization: bool = False
 
 
 PROTOCOL_CONFIGS: dict[ConnectionMode, ProtocolConfig] = {
@@ -44,5 +46,11 @@ PROTOCOL_CONFIGS: dict[ConnectionMode, ProtocolConfig] = {
         packet_size=8,
         struct_format="<fI",
         has_rssi=False,
+    ),
+    ConnectionMode.CHARACTERIZATION: ProtocolConfig(
+        packet_size=16,
+        struct_format="<ffiI",
+        has_rssi=False,
+        is_characterization=True,
     ),
 }
