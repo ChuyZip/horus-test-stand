@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QSizePolicy,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -51,7 +52,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Horus Space Lab - Banco de Pruebas de Motores Cohete")
         self.resize(1360, 850)
-        self.setMinimumSize(1180, 720)
+        self.setMinimumSize(1200, 720)
 
         self._estado_actual: EstadoInstrumentacion = EstadoInstrumentacion.TERMINADO
         self.botones_tab: list[QPushButton] = []
@@ -91,21 +92,24 @@ class MainWindow(QMainWindow):
         self.barra_superior = QFrame()
         self.barra_superior.setObjectName("BarraSuperior")
         layout_header = QHBoxLayout(self.barra_superior)
-        layout_header.setContentsMargins(16, 8, 18, 8)
-        layout_header.setSpacing(14)
+        layout_header.setContentsMargins(14, 6, 14, 6)
+        layout_header.setSpacing(10)
 
-        # Esquina izquierda: Logo circular + Títulos
-        caja_marca = QHBoxLayout()
-        caja_marca.setSpacing(10)
+        # Esquina izquierda: Logo circular + Títulos (sin restricción de ancho fijo)
+        widget_marca = QWidget()
+        widget_marca.setMinimumWidth(335)
+        caja_marca = QHBoxLayout(widget_marca)
+        caja_marca.setContentsMargins(0, 0, 0, 0)
+        caja_marca.setSpacing(8)
 
         lbl_logo = QLabel()
-        lbl_logo.setFixedSize(42, 42)
-        lbl_logo.setStyleSheet("background: transparent; border-radius: 21px;")
+        lbl_logo.setFixedSize(38, 38)
+        lbl_logo.setStyleSheet("background: transparent; border-radius: 19px;")
 
         if self.ruta_logo and os.path.exists(self.ruta_logo):
             pix = QPixmap(self.ruta_logo).scaled(
-                42,
-                42,
+                38,
+                38,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
@@ -118,22 +122,27 @@ class MainWindow(QMainWindow):
 
         vbox_titulos = QVBoxLayout()
         vbox_titulos.setSpacing(1)
+        vbox_titulos.setContentsMargins(0, 0, 0, 0)
 
         lbl_tit = QLabel("HORUS SPACE LAB")
         lbl_tit.setObjectName("TituloApp")
         lbl_sub = QLabel("SISTEMA DE SEGURIDAD Y CONTROL DE DISPARO")
         lbl_sub.setObjectName("SubtituloApp")
 
+        lbl_tit.setMinimumWidth(160)
+        lbl_sub.setMinimumWidth(260)
+        lbl_sub.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Preferred)
+
         vbox_titulos.addWidget(lbl_tit)
         vbox_titulos.addWidget(lbl_sub)
         caja_marca.addLayout(vbox_titulos)
 
-        layout_header.addLayout(caja_marca)
+        layout_header.addWidget(widget_marca)
 
         # Separador tenue
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.VLine)
-        sep.setStyleSheet("background-color: rgba(255, 255, 255, 0.12); max-width: 1px; margin: 4px 10px;")
+        sep.setStyleSheet("background-color: rgba(255, 255, 255, 0.12); max-width: 1px; margin: 4px 6px;")
         layout_header.addWidget(sep)
 
         # Centro: Pestañas horizontales de navegación
@@ -156,26 +165,36 @@ class MainWindow(QMainWindow):
         layout_header.addStretch(1)
 
         # Derecha: Estado del banco
-        fila_estado = QHBoxLayout()
+        self.widget_estado = QWidget()
+        self.widget_estado.setMinimumWidth(240)
+        fila_estado = QHBoxLayout(self.widget_estado)
         fila_estado.setSpacing(8)
+        fila_estado.setContentsMargins(0, 0, 0, 0)
 
         lbl_tag_estado = QLabel("ESTADO DEL BANCO:")
         lbl_tag_estado.setStyleSheet(
-            f"color: {COLOR_TEXTO_MUTED}; font-size: 11px; font-weight: 800; letter-spacing: 0.8px;"
+            f"color: {COLOR_TEXTO_MUTED}; font-size: 10px; font-weight: 800; letter-spacing: 0.6px;"
         )
+        lbl_tag_estado.setMinimumWidth(115)
 
         self.badge_estado = QFrame()
         self.badge_estado.setObjectName("BadgeEstado")
+        self.badge_estado.setMinimumWidth(110)
+        self.badge_estado.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+
         layout_badge = QHBoxLayout(self.badge_estado)
-        layout_badge.setContentsMargins(12, 3, 12, 3)
+        layout_badge.setContentsMargins(0, 0, 0, 0)
+        layout_badge.setSpacing(0)
 
         self.lbl_estado = QLabel(self._estado_actual.texto_completo)
         self.lbl_estado.setObjectName("TextoBadgeEstado")
+        self.lbl_estado.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_estado.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         layout_badge.addWidget(self.lbl_estado)
 
         fila_estado.addWidget(lbl_tag_estado)
         fila_estado.addWidget(self.badge_estado)
-        layout_header.addLayout(fila_estado)
+        layout_header.addWidget(self.widget_estado)
 
         # Botón ABORTAR [F12]
         self.btn_abortar = QPushButton("🛑 ABORTAR [F12]")
@@ -271,20 +290,38 @@ class MainWindow(QMainWindow):
                     break
 
         self.lbl_estado.setText(self._estado_actual.texto_completo)
+
+        # Contraste optimizado según estado operacional
+        color_borde = self._estado_actual.color
+        color_fondo = "rgba(255, 255, 255, 0.05)"
+        color_texto = self._estado_actual.color
+
+        if self._estado_actual == EstadoInstrumentacion.ABORTADO:
+            color_texto = "#FF4D4D"
+            color_borde = "#BF3938"
+            color_fondo = "rgba(191, 57, 56, 0.22)"
+
         self.lbl_estado.setStyleSheet(
-            f"color: {self._estado_actual.color}; font-size: 12px; font-weight: 800; letter-spacing: 0.8px;"
+            f"color: {color_texto}; font-size: 12px; font-weight: 800; letter-spacing: 0.5px;"
         )
         self.badge_estado.setStyleSheet(
             f"""
             QFrame#BadgeEstado {{
-                background-color: rgba(255, 255, 255, 0.05);
-                border: 1px solid {self._estado_actual.color};
+                background-color: {color_fondo};
+                border: 1px solid {color_borde};
                 border-radius: 14px;
-                padding: 4px 14px;
-                min-height: 28px;
+                padding: 4px 12px;
+                min-height: 26px;
             }}
             """
         )
+
+        # Ajuste dinámico de ancho mínimo para que ningún texto de estado se recorte
+        ancho_texto = self.lbl_estado.fontMetrics().horizontalAdvance(self.lbl_estado.text())
+        ancho_badge = max(110, ancho_texto + 26)
+        self.badge_estado.setMinimumWidth(ancho_badge)
+        if hasattr(self, "widget_estado"):
+            self.widget_estado.setMinimumWidth(125 + ancho_badge)
 
     def ejecutar_aborto(self) -> None:
         self.actualizar_estado(EstadoInstrumentacion.ABORTADO)

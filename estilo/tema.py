@@ -44,7 +44,7 @@ class EstadoInstrumentacion(Enum):
     CUENTA_REGRESIVA = ("Cuenta regresiva", "🟠", "#FF6D00")
     GRABANDO = ("Grabando", "🔴", COLOR_ACENTO_CRITICO)
     TERMINADO = ("Terminado", "🔵", "#2979FF")
-    ABORTADO = ("Abortado", "🛑", "#D50000")
+    ABORTADO = ("Abortado", "🛑", "#FF4D4D")
 
     def __init__(self, etiqueta: str, icono: str, color: str):
         self.etiqueta = etiqueta
@@ -79,31 +79,31 @@ def obtener_hoja_estilos_qss() -> str:
     QFrame#BarraSuperior {{
         background-color: #191542;
         border-bottom: 1px solid {COLOR_BORDE_NORMAL};
-        min-height: 62px;
-        max-height: 62px;
+        min-height: 60px;
+        max-height: 60px;
     }}
 
     QLabel#TituloApp {{
         color: #FFFFFF;
         font-size: 15px;
         font-weight: 900;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
     }}
 
     QLabel#SubtituloApp {{
         color: rgba(255, 255, 255, 0.70);
         font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 0.8px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
     }}
 
     /* Pestañas horizontales de navegación */
     QPushButton.TabNav {{
         background-color: transparent;
-        color: rgba(255, 255, 255, 0.80);
-        font-size: 12px;
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 11px;
         font-weight: 700;
-        padding: 8px 16px;
+        padding: 5px 10px;
         border: 1px solid transparent;
         border-radius: 6px;
     }}
@@ -121,31 +121,31 @@ def obtener_hoja_estilos_qss() -> str:
 
     /* Insignia de Estado Operacional */
     QFrame#BadgeEstado {{
-        background-color: rgba(41, 121, 255, 0.12);
+        background-color: rgba(255, 255, 255, 0.05);
         border: 1px solid #2979FF;
-        border-radius: 16px;
-        padding: 4px 14px;
-        min-height: 28px;
+        border-radius: 14px;
+        padding: 4px 12px;
+        min-height: 26px;
     }}
 
     QLabel#TextoBadgeEstado {{
         color: #2979FF;
         font-size: 12px;
         font-weight: 800;
-        letter-spacing: 0.8px;
+        letter-spacing: 0.5px;
     }}
 
     /* Botón Abortar Superior */
     QPushButton#BtnAbortarTop {{
         background-color: {COLOR_ACENTO_CRITICO};
         color: #FFFFFF;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 900;
-        letter-spacing: 1px;
+        letter-spacing: 0.6px;
         border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 6px;
-        padding: 6px 16px;
-        min-height: 30px;
+        padding: 5px 12px;
+        min-height: 28px;
     }}
 
     QPushButton#BtnAbortarTop:hover {{
