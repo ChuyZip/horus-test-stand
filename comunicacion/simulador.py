@@ -173,6 +173,12 @@ class SimuladorMotorCohete(CanalDAQ):
         """Alias para interfaz normalizada CanalDAQ."""
         self.iniciar_simulacion()
 
+    def detener(self) -> None:
+        """Detiene de forma controlada la secuencia de simulación."""
+        with QMutexLocker(self._mutex):
+            self._activo = False
+
     def detener_adquisicion(self) -> None:
         """Alias para interfaz normalizada CanalDAQ."""
         self.detener()
+

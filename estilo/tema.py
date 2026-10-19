@@ -257,6 +257,62 @@ def obtener_hoja_estilos_qss() -> str:
     }}
 
     /* ==========================================
+       FORMULARIOS Y CAMPOS DE ENTRADA GLOBALES
+       ========================================== */
+    QDialog {{
+        background-color: {COLOR_FONDO_PRINCIPAL};
+        color: #FFFFFF;
+    }}
+
+    QLabel.EtiquetaCampo, QDialog QLabel {{
+        color: #FFFFFF;
+        font-size: 13px;
+        font-weight: 500;
+    }}
+
+    QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit {{
+        background-color: #352F7E;
+        color: #FFFFFF;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        min-height: 28px;
+        height: 32px;
+        padding: 4px 8px;
+        font-size: 13px;
+        font-weight: 500;
+        selection-background-color: #0D6EFD;
+        selection-color: #FFFFFF;
+    }}
+
+    QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus {{
+        border: 1px solid {COLOR_CIAN};
+        background-color: #3E3793;
+    }}
+
+    QSpinBox::up-button, QDoubleSpinBox::up-button, QDateEdit::up-button {{
+        subcontrol-origin: border;
+        subcontrol-position: top right;
+        width: 20px;
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+        border-top-right-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+    }}
+
+    QSpinBox::down-button, QDoubleSpinBox::down-button, QDateEdit::down-button {{
+        subcontrol-origin: border;
+        subcontrol-position: bottom right;
+        width: 20px;
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+        border-bottom-right-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+    }}
+
+    QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover, QDateEdit::up-button:hover,
+    QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover, QDateEdit::down-button:hover {{
+        background: rgba(255, 255, 255, 0.15);
+    }}
+
+    /* ==========================================
        FOOTER INFERIOR
        ========================================== */
     QLabel#FooterTexto {{
