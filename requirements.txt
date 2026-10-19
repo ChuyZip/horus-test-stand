@@ -1,5 +1,5 @@
-PyQt6>=6.5
-pyqtgraph>=0.13
-numpy>=1.24
+PySide6>=6.5.0
+pyqtgraph>=0.13.0
 pyserial>=3.5
-pytest>=7.0
+numpy>=1.22.0
+scipy>=1.10.0

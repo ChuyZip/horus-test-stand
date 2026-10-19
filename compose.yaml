@@ -1,0 +1,6 @@
+services:
+  bancodepruebas2026:
+    image: bancodepruebas2026
+    build:
+      context: .
+      dockerfile: ./Dockerfile

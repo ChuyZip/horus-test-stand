@@ -4,6 +4,7 @@ Módulo de lectura UDP para la conexión por WiFi del banco de pruebas.
 Implementa un QThread que actúa como servidor UDP para recibir la telemetría
 desde el ESP32, y mantiene la IP del cliente para enviar comandos de vuelta.
 """
+from __future__ import annotations
 
 import socket
 import struct

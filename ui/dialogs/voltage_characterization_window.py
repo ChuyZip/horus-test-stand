@@ -6,6 +6,7 @@ Incluye funcionalidades de:
 - Cargar y analizar un CSV de caracterizacion previo.
 - Recortar las graficas para exportar solo el rango de interes.
 """
+from __future__ import annotations
 
 import csv
 import os

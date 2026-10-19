@@ -1,6 +1,8 @@
 """
 Widget de paneles de graficos con soporte de modo recorte.
 """
+from __future__ import annotations
+
 import logging
 from bisect import bisect_left
 from math import hypot

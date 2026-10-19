@@ -4,6 +4,7 @@ Módulo de lectura de puerto serie para la telemetría del banco de pruebas.
 Proporciona la clase SerialReader que procesa de manera asíncrona mediante un QThread
 los paquetes binarios entrantes según el protocolo de conexión seleccionado.
 """
+from __future__ import annotations
 
 # Importa logging para registrar eventos, mensajes de depuración y errores del lector serie.
 import logging

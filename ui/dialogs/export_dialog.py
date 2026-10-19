@@ -4,6 +4,7 @@ Dialogo de confirmacion inteligente para exportacion de CSV.
 Aparece cuando el usuario intenta exportar manualmente y ya existe
 un archivo CSV autoguardado activo en la sesion.
 """
+from __future__ import annotations
 
 import logging
 from pathlib import Path

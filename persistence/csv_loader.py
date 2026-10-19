@@ -1,4 +1,5 @@
 """Carga de archivos CSV de telemetria para su analisis posterior."""
+from __future__ import annotations
 
 import csv
 from dataclasses import dataclass

@@ -1,4 +1,5 @@
 """Ventana para analizar ensayos de telemetria guardados en CSV."""
+from __future__ import annotations
 
 import os
 
