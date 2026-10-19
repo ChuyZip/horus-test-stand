@@ -1,80 +1,104 @@
-# Horus Space Lab - Banco de Pruebas 2026
+# Horus Space Lab - Banco de Pruebas de Motores Cohete 2026
 
-Aplicacion de escritorio para adquirir, visualizar y analizar telemetria de empuje en bancos de prueba de motores de cohete. Horus recibe muestras en tiempo real, muestra las curvas de empuje e impulso, guarda los ensayos en CSV y permite comparar dos corridas.
+Estación de control, adquisición de datos (DAQ) y análisis balístico en tiempo real para bancos de pruebas estáticas de motores cohete experimentales (propelentes sólidos APCP, KNSB, KNDX y motores híbridos/líquidos).
 
-## Funciones principales
+---
 
-- Telemetria en tiempo real por cable, LoRa o WiFi/UDP.
-- Grafica de empuje e impulso acumulado, con lectura de coordenadas al pasar el cursor sobre un punto.
-- Filtro de mediana de 5 muestras para reducir picos aislados y umbral de empuje para evitar que el ruido se integre como impulso.
-- Cambio entre Newtons y kilogramos-fuerza en la vista en vivo y en el analizador.
-- Indicadores de empuje actual, maximo, impulso, clase NAR, senal y paquetes perdidos. Cada indicador incluye ayuda contextual.
-- Tare de la celda de carga, recorte de intervalos y exportacion del rango seleccionado con impulso recalculado.
-- Autoguardado CSV con carpeta seleccionable y persistente.
-- Ventana `ANALIZAR` para cargar un ensayo A y un ensayo B, superponer sus curvas y calcular cambios porcentuales de empuje maximo e impulso.
-- Ventana `VOLT/KG` para caracterizar la celda con voltaje en mV, peso y cuentas crudas del HX711, incluyendo curvas contra tiempo y respuesta voltaje-peso.
-- Ignicion protegida: requiere armar el sistema y confirmar un codigo temporal de cuatro digitos antes de enviar `FIRE`.
-- Pantalla de inicio con identidad de Horus Space Lab.
+## 🚀 Características Principales
 
-## Requisitos
+- **Adquisición a 200 Hz y Renderizado a 60 FPS:** Interfaz gráfica nativa basada en **PySide6** y **pyqtgraph** con aceleración por hardware y refresco desacoplado mediante `QThread` y `QTimer`.
+- **Doble Canal de Telemetría (Desacoplado):**
+  - **Modo SIMULACIÓN:** Modelo físico sintético de combustión estocástica a 200 Hz (fase pre-ignición, pico transitorio de presurización, meseta con inestabilidades acústicas de cámara, caída regresiva y corte).
+  - **Modo HARDWARE REAL (Serial ESP32):** Conexión UART/USB con microcontrolador ESP32 con comandos normalizados (`ARM`, `DISARM`, `FIRE`, `TARE`, `STOP`, `ABORT`, `SET_RATE`) y recepción de tramas a alta velocidad.
+- **Filtro Digital IIR Configurable:** Filtro pasabajas recursivo de primer orden (suavizado exponencial $y[k] = \alpha \cdot x[k] + (1-\alpha) \cdot y[k-1]$) con ajuste por frecuencia de corte $f_c$ y de muestreo $f_s$.
+- **Cálculo Balístico en Tiempo Real:** Integración numérica por regla trapezoidal para impulso total ($I_{\text{total}}$ en N·s) con supresión de zona muerta para evitar integrar derivas térmicas del sensor en reposo.
+- **Métricas Balísticas Avanzadas:** Cálculo automático de empuje promedio ($\bar{F}$), tiempo de combustión ($t_b$), impulso específico ($I_{sp} = I_{\text{tot}} / (m_p \cdot g_0)$), velocidad de regresión de quemado ($r$) y clasificación internacional Nakka/NAR (Clases 1/4A hasta O).
+- **Base de Datos SQLite Integrada (`datos/`):** Almacenamiento relacional automático de todos los ensayos, propiedades de la muestra y series temporales completas.
+- **Historial y Superposición Multi-Ensayo:** Tabla con búsqueda interactiva, superposición simultánea de múltiples curvas de empuje con leyendas y gráfica de envejecimiento de propelente (Isp vs. Días de vejez).
+- **Asistente de Calibración N/V:** Ajuste lineal multipunto por mínimos cuadrados ordinarios ($F = m \cdot V + b$) con verificación de bondad de ajuste $R^2 \ge 0.998$ y guardado persistente en JSON.
+- **Seguridad Rigurosa:** Parada de emergencia permanente **ABORTAR [F12]**, detección de saturación de ADC/sensor ($V \ge 4.95\text{ V}$) y máquina de estados finita (Listo 🟢, Armado 🟡, Cuenta regresiva 🟠, Grabando 🔴, Terminado 🔵, Abortado 🛑).
 
-- Python 3.9 o superior.
-- Una celda de carga y su sistema de adquisicion configurados para enviar los paquetes de telemetria.
+---
 
-Instala las dependencias:
+## 📦 Estructura del Proyecto
 
-```bash
-python -m pip install -r requirements.txt
+```text
+BancoDePruebas2026/
+├── core/                       # Núcleo de cálculo científico
+│   ├── procesador_senal.py     # Filtro IIR, calibración N/V e integrador trapezoidal
+│   └── balistica.py            # Fórmulas de Isp, empuje promedio y clases Nakka/NAR
+├── comunicacion/               # Capa de adquisición de datos (DAQ)
+│   ├── base.py                 # Clase base abstracta CanalDAQ(QThread)
+│   ├── simulador.py            # Generador sintético de curva de motor cohete (200 Hz)
+│   └── driver_serial.py        # Driver serial para microcontrolador ESP32
+├── datos/                      # Capa de persistencia y base de datos
+│   └── gestor_db.py            # Gestor SQLite (horus_test_stand.db) y exportador CSV
+├── estilo/                     # Sistema de diseño centralizado
+│   └── tema.py                 # Paleta aeroespacial (#1F1B4E, #BF3938), QSS y estados
+├── ui/                         # Interfaz gráfica PySide6
+│   ├── main_window.py          # Ventana principal (Header, Tabs horizontales y Footer)
+│   ├── dialogos/               # Diálogos modales
+│   │   ├── dialogo_muestra.py  # Ficha técnica previa de la muestra de propelente
+│   │   └── dialogo_resultados.py # Reporte balístico post-ensayo y exportación
+│   └── vistas/                 # Vistas apiladas en QStackedWidget
+│       ├── vista_prueba.py     # Vista de prueba en vivo (4 KPIs + 3 gráficas pyqtgraph)
+│       ├── vista_historial.py  # Historial SQLite, superposición y gráfica vs vejez
+│       ├── vista_calibracion.py# Asistente de pesas patrón y ajuste lineal R²
+│       └── vista_configuracion.py # Parámetros DAQ, selección de puerto serie y filtros
+├── assets/                     # Recursos gráficos y logo transparente
+│   └── logo.png
+├── main.py                     # Punto de entrada con auto-parche Cocoa para macOS
+└── requirements.txt            # Dependencias del entorno virtual
 ```
 
-## Ejecucion
+---
+
+## 🛠️ Instalación y Requisitos
+
+- Python 3.9 o superior.
+- macOS (Apple Silicon M1/M2/M3/M4 o Intel), Linux o Windows.
+
+1. Clona el repositorio e ingresa a la carpeta:
+```bash
+git clone https://github.com/ChuyZip/horus-test-stand.git
+cd horus-test-stand
+```
+
+2. Crea y activa un entorno virtual:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+3. Instala las dependencias:
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 🖥️ Ejecución
+
+Para iniciar la aplicación de instrumentación:
 
 ```bash
 python main.py
 ```
 
-Para ejecutar las pruebas automatizadas:
+O directamente mediante el binario del entorno virtual:
 
 ```bash
-python -m pytest -q
+.venv/bin/python main.py
 ```
 
-## Flujo de operacion
+---
 
-1. Inicia Horus y selecciona el modo de conexion: `Cable`, `LoRa` o `WiFi`.
-2. Conecta la fuente de telemetria. En WiFi, Horus escucha por UDP en el puerto `8888`.
-3. Usa `TARE` sin carga para establecer el cero de la medicion.
-4. Inicia la adquisicion; el autoguardado creara un CSV en la carpeta elegida con `CARPETA CSV`.
-5. Exporta el ensayo completo o activa el recorte para guardar solo una parte de la corrida.
-6. Abre `ANALIZAR`, carga los CSV en A y B y revisa las curvas y las variaciones de rendimiento.
-7. Para caracterizar la celda, abre `VOLT/KG` antes de conectar por serie; por WiFi, los datagramas extendidos de 16 bytes se detectan automaticamente.
+## 🧪 Protocolo de Operación en el Banco de Pruebas
 
-## Formato de telemetria
-
-Los paquetes binarios de telemetria contienen el empuje como `float` de 4 bytes y un numero de secuencia `uint32` de 4 bytes. El numero de secuencia permite detectar paquetes perdidos. En modo LoRa se agrega el RSSI.
-
-Los CSV exportados incluyen tiempo, empuje en Newtons y kilogramos-fuerza. Los CSV de recorte tambien incluyen el impulso acumulado recalculado desde el inicio del intervalo elegido.
-
-El modo `VOLT/KG` recibe el paquete extendido `<ffiI`: peso en kg, voltaje en mV, cuenta cruda del HX711 y secuencia. Sus CSV incluyen esas cinco columnas junto con el tiempo de captura.
-
-## Estructura
-
-```text
-BancoDePruebas2026/
-|- communication/  Lectores serie y UDP, protocolos de conexion
-|- config/         Constantes, estilos, configuracion y clases NAR
-|- core/           Procesamiento, filtrado, integracion y clasificacion
-|- persistence/    Autoguardado, carga y exportacion CSV
-|- ui/             Ventana principal, dialogos y widgets PyQt6
-|- tests/          Pruebas automatizadas
-|- main.py         Punto de entrada
-`- requirements.txt
-```
-
-## Seguridad de ignicion
-
-La confirmacion por codigo reduce activaciones accidentales, pero no reemplaza procedimientos fisicos de seguridad. Antes de armar el sistema, verifica el area de prueba, las conexiones, el relevador y que no haya personas dentro de la zona de riesgo.
-
-## Empaquetado
-
-Para PyInstaller, usa `main.py` como punto de entrada e incluye los recursos graficos del proyecto, como `HSL_transparent.png`.
+1. **Caracterización de Muestra:** Abre la pestaña `🚀 Prueba en Vivo` y haz clic en `[📋 CARACTERIZAR MUESTRA]`. Introduce las dimensiones del grano, masa de propelente en gramos y condiciones ambientales.
+2. **Selección de Modo:**
+   - Para ensayos de prueba / demostración: utiliza el **Modo SIMULACIÓN**.
+   - Para pruebas reales en banco: ve a `⚙️ Configuración`, selecciona **Modo HARDWARE REAL**, elige el puerto serie del ESP32 (`/dev/cu.usb*`) y presiona `Guardar`.
+3. **Inicio del Ensayo:** Pulsa `[▶ INICIAR ENSAYO]`. La telemetría comenzará a fluir a 200 Hz y la curva de empuje se trazará en tiempo real marcando el pico máximo y el tiempo de ignición.
+4. **Resultados Balísticos y Guardado:** Al finalizar el quemado, el panel balístico mostrará el $I_{sp}$, empuje medio y clasificación Nakka, permitiendo guardar el registro en la base de datos **SQLite** y exportarlo a **CSV**.
+5. **Análisis Histórico:** En la pestaña `📊 Historial / Comparar`, selecciona dos o más ensayos para superponer sus curvas y evaluar la reproducibilidad entre lotes de producción.

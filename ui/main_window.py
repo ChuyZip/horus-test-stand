@@ -223,6 +223,9 @@ class MainWindow(QMainWindow):
         # Conectar cambios de estado emitidos por la vista de prueba
         self.vista_prueba.estado_cambiado.connect(self.actualizar_estado)
 
+        # Conectar cambios de configuración hacia la vista de prueba
+        self.vista_configuracion.configuracion_guardada.connect(self._al_guardar_configuracion)
+
     def _configurar_atajos_seguridad(self) -> None:
         self.atajo_abortar = QShortcut(QKeySequence(Qt.Key.Key_F12), self)
         self.atajo_abortar.setContext(Qt.ShortcutContext.ApplicationShortcut)
@@ -240,6 +243,23 @@ class MainWindow(QMainWindow):
             btn.style().polish(btn)
 
         self.stack_vistas.setCurrentIndex(indice)
+
+        # Si entra a Historial, recargar tabla desde SQLite
+        if indice == 1:
+            self.vista_historial.recargar_tabla()
+
+    def _al_guardar_configuracion(self, cfg: dict) -> None:
+        modo = cfg.get("modo", "simulacion")
+        if modo == "serial":
+            puerto = cfg.get("puerto", "")
+            baud = cfg.get("baudrate", 115200)
+            from comunicacion.driver_serial import DriverSerialESP32
+            self.vista_prueba.canal_daq = DriverSerialESP32(puerto=puerto, baudrate=baud)
+        else:
+            from comunicacion.simulador import SimuladorMotorCohete
+            self.vista_prueba.canal_daq = SimuladorMotorCohete(frecuencia_hz=cfg.get("fs_hz", 200.0))
+
+        self.vista_prueba._conectar_canal_daq()
 
     def actualizar_estado(self, nuevo_estado: object) -> None:
         if isinstance(nuevo_estado, EstadoInstrumentacion):

@@ -15,18 +15,13 @@ import random
 import time
 from typing import Optional
 
-from PySide6.QtCore import QMutex, QMutexLocker, QThread, Signal
-
+from PySide6.QtCore import QMutex, QMutexLocker
+from comunicacion.base import CanalDAQ
 from estilo.tema import EstadoInstrumentacion
 
 
-class SimuladorMotorCohete(QThread):
+class SimuladorMotorCohete(CanalDAQ):
     """Hilo generador de telemetría sintética de alta fidelidad (200 Hz)."""
-
-    # Señales para la interfaz de instrumentación
-    nueva_muestra = Signal(float, float)            # (tiempo_s, voltaje_v)
-    estado_cambiado = Signal(object)                # EstadoInstrumentacion
-    simulacion_finalizada = Signal()
 
     def __init__(
         self,
@@ -174,8 +169,10 @@ class SimuladorMotorCohete(QThread):
             self._abortado = True
             self._activo = False
 
-    def detener(self) -> None:
-        """Detiene la simulación ordenadamente."""
-        with QMutexLocker(self._mutex):
-            self._activo = False
-        self.wait(1000)
+    def iniciar_adquisicion(self) -> None:
+        """Alias para interfaz normalizada CanalDAQ."""
+        self.iniciar_simulacion()
+
+    def detener_adquisicion(self) -> None:
+        """Alias para interfaz normalizada CanalDAQ."""
+        self.detener()
