@@ -80,7 +80,7 @@ from PySide6.QtWidgets import QApplication
 
 app = QApplication.instance() or QApplication([])
 
-from ui.dialogos.dialogo_muestra import DialogoMuestra, GEOMETRIAS_GRANO, CONFIGURACIONES_CLUSTER
+from ui.dialogos.dialogo_muestra import DialogoMuestra, GEOMETRIAS_GRANO, CONFIGURACIONES_CLUSTER, ESTILO_BORDE_ERROR
 from ui.vistas.vista_prueba import VistaPrueba
 
 dlg = DialogoMuestra()
@@ -111,7 +111,7 @@ assert not dlg.spn_cluster_personalizado.isHidden()
 dlg.spn_cluster_personalizado.setValue(6)
 assert dlg._obtener_valor_cluster() == "Personalizado (6x)"
 
-# Validación y guardado en dataclass y dict
+# Validación exitosa y guardado en dataclass y dict
 dlg.txt_id.setText("EXP-MODAL-TEST")
 dlg.combo_geometria.setCurrentText("Moon Burner (Núcleo excéntrico)")
 dlg._validar_y_guardar()
@@ -126,6 +126,68 @@ assert dlg.datos["cluster_motores"] == "Personalizado (6x)"
 # Verificar texto actualizado del botón en VistaPrueba
 vista = VistaPrueba()
 assert vista.btn_muestra.text() == "📋 DATOS DE LA MUESTRA"
+
+# ==============================================================
+# VALIDACIÓN ESTRICTA DE FORMULARIO Y RESTAURACIÓN DE ESTILOS
+# ==============================================================
+dlg2 = DialogoMuestra()
+
+# 1. Vaciar ID de Muestra y Operadores
+dlg2.txt_id.setText("   ")
+dlg2.txt_operadores.setText("")
+valido, errores = dlg2.validar_formulario()
+assert not valido
+assert any("ID de Muestra" in e for e in errores)
+assert any("Operador(es)" in e for e in errores)
+assert dlg2.txt_id.styleSheet() == ESTILO_BORDE_ERROR
+assert dlg2.txt_operadores.styleSheet() == ESTILO_BORDE_ERROR
+
+# Al escribir en txt_id se debe limpiar el borde rojo inmediatamente
+dlg2.txt_id.setText("EXP-VALID-01")
+assert dlg2.txt_id.styleSheet() == ""
+
+# 2. Validación de Diámetro Interior >= Diámetro Exterior
+dlg2.txt_operadores.setText("Operador")
+dlg2.spn_diam_ext.setValue(20.0)
+dlg2.spn_diam_int.setValue(25.0)
+valido, errores = dlg2.validar_formulario()
+assert not valido
+assert any("Diámetro Interior" in e for e in errores)
+assert dlg2.spn_diam_int.styleSheet() == ESTILO_BORDE_ERROR
+
+# Al corregir diámetro se limpia
+dlg2.spn_diam_int.setValue(10.0)
+assert dlg2.spn_diam_int.styleSheet() == ""
+
+# 3. Validación de Masa <= 0 y Altura <= 0
+dlg2.spn_masa.setValue(0.0)
+dlg2.spn_altura.setValue(0.0)
+valido, errores = dlg2.validar_formulario()
+assert not valido
+assert any("Masa Inicial" in e for e in errores)
+assert any("Altura / Longitud" in e for e in errores)
+assert dlg2.spn_masa.styleSheet() == ESTILO_BORDE_ERROR
+assert dlg2.spn_altura.styleSheet() == ESTILO_BORDE_ERROR
+
+dlg2.spn_masa.setValue(150.0)
+dlg2.spn_altura.setValue(100.0)
+assert dlg2.spn_masa.styleSheet() == ""
+assert dlg2.spn_altura.styleSheet() == ""
+
+# 4. Validación de Tipo / Composición de Propelente
+dlg2.txt_composicion.setText("   ")
+valido, errores = dlg2.validar_formulario()
+assert not valido
+assert any("Composición de Propelente" in e for e in errores)
+assert dlg2.txt_composicion.styleSheet() == ESTILO_BORDE_ERROR
+
+dlg2.txt_composicion.setText("KNSB 65/35")
+assert dlg2.txt_composicion.styleSheet() == ""
+
+# 5. Formulario completamente válido
+valido, errores = dlg2.validar_formulario()
+assert valido
+assert len(errores) == 0
 
 print("UI_TEST_OK")
 """

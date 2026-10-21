@@ -11,6 +11,7 @@ Estilos y layout optimizados para instrumentación aeroespacial (Horus Space Lab
     * border-radius: 6px.
 - QFormLayout limpio con verticalSpacing: 10px y horizontalSpacing: 18px.
 - Contenedor en QScrollArea con barra horizontal desactivada y barra vertical estilizada.
+- Validación estricta con retroalimentación visual inmediata (borde rojo #BF3938) y alerta oscura.
 - 13 campos reglamentarios (incluyendo Geometría de Grano y Cluster de Motores).
 """
 
@@ -64,6 +65,11 @@ CONFIGURACIONES_CLUSTER = [
     "Personalizado (con número de motores activos)",
 ]
 
+# Estilo QSS para resaltar campos con error de validación
+ESTILO_BORDE_ERROR = (
+    "border: 1.5px solid #BF3938; background-color: #352F7E; color: #FFFFFF; border-radius: 6px;"
+)
+
 
 class DialogoMuestra(QDialog):
     """Formulario modal de Ficha Técnica de la Muestra / Motor cohete."""
@@ -81,6 +87,7 @@ class DialogoMuestra(QDialog):
 
         self.metadata_resultado: Optional[EnsayoMetadata] = None
         self._meta_inicial = meta_inicial
+        self._campos_con_error: set[QWidget] = set()
 
         self._aplicar_estilos()
         self._construir_ui()
@@ -385,7 +392,7 @@ class DialogoMuestra(QDialog):
 
         self.spn_diam_ext = QDoubleSpinBox()
         self.spn_diam_ext.setDecimals(1)
-        self.spn_diam_ext.setRange(1.0, 500.0)
+        self.spn_diam_ext.setRange(0.0, 500.0)
         self.spn_diam_ext.setValue(38.0)
         self.spn_diam_ext.setSuffix(" mm")
 
@@ -397,19 +404,19 @@ class DialogoMuestra(QDialog):
 
         self.spn_altura = QDoubleSpinBox()
         self.spn_altura.setDecimals(1)
-        self.spn_altura.setRange(1.0, 2500.0)
+        self.spn_altura.setRange(0.0, 2500.0)
         self.spn_altura.setValue(145.0)
         self.spn_altura.setSuffix(" mm")
 
         self.spn_masa = QDoubleSpinBox()
         self.spn_masa.setDecimals(1)
-        self.spn_masa.setRange(0.1, 50000.0)
+        self.spn_masa.setRange(0.0, 50000.0)
         self.spn_masa.setValue(245.0)
         self.spn_masa.setSuffix(" g")
 
         self.spn_temp = QDoubleSpinBox()
         self.spn_temp.setDecimals(1)
-        self.spn_temp.setRange(-30.0, 65.0)
+        self.spn_temp.setRange(-50.0, 80.0)
         self.spn_temp.setValue(22.5)
         self.spn_temp.setSuffix(" °C")
 
@@ -421,6 +428,9 @@ class DialogoMuestra(QDialog):
 
         self.txt_composicion = QLineEdit("KNSB 65/35 (Nitrato de Potasio / Sorbitol)")
         self.txt_composicion.setPlaceholderText("Ej. APCP 70/15/15 o KNDX")
+
+        # Conectar eventos de cambio para restaurar estilo normal al interactuar
+        self._conectar_senales_limpieza()
 
         # Lista reglamentaria de 13 campos con etiquetas claras en la columna izquierda
         campos = [
@@ -469,6 +479,33 @@ class DialogoMuestra(QDialog):
         fila_btn.addWidget(btn_confirmar)
 
         layout_raiz.addLayout(fila_btn)
+
+    def _conectar_senales_limpieza(self) -> None:
+        """Conecta eventos de edición para restaurar el borde normal al interactuar con el campo."""
+        self.txt_id.textChanged.connect(lambda: self._limpiar_campo(self.txt_id))
+        self.txt_operadores.textChanged.connect(lambda: self._limpiar_campo(self.txt_operadores))
+        self.date_fecha.dateChanged.connect(lambda: self._limpiar_campo(self.date_fecha))
+        self.spn_vejez.valueChanged.connect(lambda: self._limpiar_campo(self.spn_vejez))
+        self.combo_geometria.currentTextChanged.connect(lambda: self._limpiar_campo(self.combo_geometria))
+        self.combo_cluster.currentTextChanged.connect(lambda: self._limpiar_campo(self.combo_cluster))
+        self.spn_cluster_personalizado.valueChanged.connect(lambda: self._limpiar_campo(self.spn_cluster_personalizado))
+        self.spn_diam_ext.valueChanged.connect(
+            lambda: (self._limpiar_campo(self.spn_diam_ext), self._limpiar_campo(self.spn_diam_int))
+        )
+        self.spn_diam_int.valueChanged.connect(
+            lambda: (self._limpiar_campo(self.spn_diam_int), self._limpiar_campo(self.spn_diam_ext))
+        )
+        self.spn_altura.valueChanged.connect(lambda: self._limpiar_campo(self.spn_altura))
+        self.spn_masa.valueChanged.connect(lambda: self._limpiar_campo(self.spn_masa))
+        self.spn_temp.valueChanged.connect(lambda: self._limpiar_campo(self.spn_temp))
+        self.spn_humedad.valueChanged.connect(lambda: self._limpiar_campo(self.spn_humedad))
+        self.txt_composicion.textChanged.connect(lambda: self._limpiar_campo(self.txt_composicion))
+
+    def _limpiar_campo(self, widget: QWidget) -> None:
+        """Restaura el estilo y borde translúcido normal de un control específico."""
+        if widget in self._campos_con_error:
+            widget.setStyleSheet("")
+            self._campos_con_error.discard(widget)
 
     def _obtener_valor_cluster(self) -> str:
         """Determina el descriptor del cluster según la opción seleccionada."""
@@ -542,42 +579,176 @@ class DialogoMuestra(QDialog):
             self.combo_cluster.setCurrentIndex(4)
             self.spn_cluster_personalizado.setValue(meta.num_motores)
 
-    def _validar_y_guardar(self) -> None:
-        """Aplica validaciones balísticas y geométricas antes de aceptar."""
-        codigo = self.txt_id.text().strip()
-        if not codigo:
-            QMessageBox.warning(self, "Validación requerida", "El 'ID de Muestra' no puede estar vacío.")
-            self.txt_id.setFocus()
-            return
+    def validar_formulario(self) -> tuple[bool, list[str]]:
+        """Valida rigurosamente todos los campos conforme a las reglas balísticas y físicas.
 
+        Returns:
+            tuple[bool, list[str]]: (es_valido, lista_mensajes_faltantes)
+        """
+        errores: list[str] = []
+        campos_invalidos: list[QWidget] = []
+
+        # 1. ID de Muestra: No debe estar vacío o con solo espacios en blanco
+        if not self.txt_id.text().strip():
+            errores.append("ID de Muestra")
+            campos_invalidos.append(self.txt_id)
+
+        # 2. Operador(es): No debe estar vacío
+        if not self.txt_operadores.text().strip():
+            errores.append("Operador(es)")
+            campos_invalidos.append(self.txt_operadores)
+
+        # 3. Fecha de Ensayo: Debe tener una fecha válida seleccionada
+        fecha = self.date_fecha.date()
+        if not fecha.isValid() or fecha.isNull():
+            errores.append("Fecha de Ensayo")
+            campos_invalidos.append(self.date_fecha)
+
+        # 4. Días de Vejez: Debe tener un valor numérico válido (>= 0)
+        if self.spn_vejez.value() < 0:
+            errores.append("Días de Vejez (debe ser mayor o igual a 0)")
+            campos_invalidos.append(self.spn_vejez)
+
+        # 5. Tipo de Geometría de Grano: Opción seleccionada no vacía
+        if not self.combo_geometria.currentText().strip():
+            errores.append("Tipo de Geometría de Grano")
+            campos_invalidos.append(self.combo_geometria)
+
+        # 6. Configuración Cluster de Motores: Opción seleccionada no vacía
+        texto_cluster = self.combo_cluster.currentText().strip()
+        if not texto_cluster:
+            errores.append("Configuración Cluster de Motores")
+            campos_invalidos.append(self.combo_cluster)
+        elif "Personalizado" in texto_cluster and self.spn_cluster_personalizado.value() <= 0:
+            errores.append("Configuración Cluster de Motores (número de motores debe ser mayor a 0)")
+            campos_invalidos.append(self.spn_cluster_personalizado)
+
+        # 7. Diámetro Exterior (mm): Debe ser mayor a 0
         diam_ext = self.spn_diam_ext.value()
-        diam_int = self.spn_diam_int.value()
-        if diam_int >= diam_ext:
-            QMessageBox.warning(
-                self,
-                "Error geométrico",
-                f"El diámetro interior ({diam_int:.1f} mm) debe ser menor que el exterior ({diam_ext:.1f} mm).",
-            )
-            self.spn_diam_int.setFocus()
-            return
+        if diam_ext <= 0.0:
+            errores.append("Diámetro Exterior (mm) (debe ser mayor a 0)")
+            campos_invalidos.append(self.spn_diam_ext)
 
-        masa = self.spn_masa.value()
-        if masa <= 0:
-            QMessageBox.warning(self, "Masa inválida", "La masa inicial de grano debe ser mayor a 0 gramos.")
-            self.spn_masa.setFocus()
+        # 8. Diámetro Interior (mm): >= 0 y estrictamente menor que Diámetro Exterior
+        diam_int = self.spn_diam_int.value()
+        if diam_int < 0.0:
+            errores.append("Diámetro Interior (mm) (debe ser mayor o igual a 0)")
+            campos_invalidos.append(self.spn_diam_int)
+        elif diam_ext > 0.0 and diam_int >= diam_ext:
+            errores.append(
+                f"Diámetro Interior ({diam_int:.1f} mm) debe ser estrictamente menor que Diámetro Exterior ({diam_ext:.1f} mm)"
+            )
+            campos_invalidos.append(self.spn_diam_int)
+
+        # 9. Altura / Longitud (mm): Debe ser mayor a 0
+        if self.spn_altura.value() <= 0.0:
+            errores.append("Altura / Longitud (mm) (debe ser mayor a 0)")
+            campos_invalidos.append(self.spn_altura)
+
+        # 10. Masa Inicial de Grano (g): Debe ser mayor a 0
+        if self.spn_masa.value() <= 0.0:
+            errores.append("Masa Inicial de Grano (g) (debe ser mayor a 0)")
+            campos_invalidos.append(self.spn_masa)
+
+        # 11. Temperatura Ambiente (°C): Valor numérico definido
+        temp_val = self.spn_temp.value()
+        if temp_val is None or temp_val < -50.0 or temp_val > 80.0:
+            errores.append("Temperatura Ambiente (°C)")
+            campos_invalidos.append(self.spn_temp)
+
+        # 12. Humedad Relativa (%): Valor entre 0% y 100%
+        hum_val = self.spn_humedad.value()
+        if hum_val < 0.0 or hum_val > 100.0:
+            errores.append("Humedad Relativa (%) (debe estar entre 0% y 100%)")
+            campos_invalidos.append(self.spn_humedad)
+
+        # 13. Tipo / Composición de Propelente: No debe estar vacío
+        if not self.txt_composicion.text().strip():
+            errores.append("Tipo / Composición de Propelente")
+            campos_invalidos.append(self.txt_composicion)
+
+        # Restaurar bordes normales de campos que ya se corrigieron
+        for w in list(self._campos_con_error):
+            if w not in campos_invalidos:
+                self._limpiar_campo(w)
+
+        # Aplicar borde rojo #BF3938 a los campos inválidos
+        for w in campos_invalidos:
+            w.setStyleSheet(ESTILO_BORDE_ERROR)
+            self._campos_con_error.add(w)
+
+        # Enfocar el primer campo inválido para guiar al usuario
+        if campos_invalidos:
+            campos_invalidos[0].setFocus()
+
+        return (len(errores) == 0, errores)
+
+    def _mostrar_alerta_validacion(self, errores: list[str]) -> None:
+        """Muestra cuadro de diálogo de advertencia con estética oscura (#1F1B4E / #2A2566)."""
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Validación Requerida - Horus Space Lab")
+        msg_box.setIcon(QMessageBox.Icon.Warning)
+
+        lista_parametros = "\n".join(f"  • {err}" for err in errores)
+        mensaje = (
+            "⚠️ No es posible habilitar el armado del banco. "
+            "Faltan los siguientes parámetros obligatorios:\n\n"
+            f"{lista_parametros}"
+        )
+        msg_box.setText(mensaje)
+        msg_box.setStyleSheet(
+            f"""
+            QMessageBox {{
+                background-color: {COLOR_FONDO_PRINCIPAL};
+                color: #FFFFFF;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }}
+            QLabel {{
+                color: #FFFFFF;
+                font-size: 13px;
+                font-weight: 500;
+                line-height: 1.4;
+                padding: 4px;
+            }}
+            QPushButton {{
+                background-color: #007A3D;
+                color: #FFFFFF;
+                border: 1px solid {COLOR_VERDE_NEON};
+                border-radius: 6px;
+                padding: 6px 20px;
+                font-weight: 800;
+                font-size: 12px;
+                min-height: 28px;
+                min-width: 90px;
+            }}
+            QPushButton:hover {{
+                background-color: #00964B;
+            }}
+            QPushButton:pressed {{
+                background-color: #005A2C;
+            }}
+            """
+        )
+        msg_box.exec()
+
+    def _validar_y_guardar(self) -> None:
+        """Aplica validaciones estrictas antes de aceptar y habilitar el armado."""
+        es_valido, errores = self.validar_formulario()
+        if not es_valido:
+            self._mostrar_alerta_validacion(errores)
             return
 
         fecha_str = self.date_fecha.date().toString("yyyy-MM-dd")
 
         self.metadata_resultado = EnsayoMetadata(
-            codigo_ensayo=codigo,
+            codigo_ensayo=self.txt_id.text().strip(),
             operadores=self.txt_operadores.text().strip(),
             fecha=fecha_str,
             dias_vejez=self.spn_vejez.value(),
-            diam_ext_mm=diam_ext,
-            diam_int_mm=diam_int,
+            diam_ext_mm=self.spn_diam_ext.value(),
+            diam_int_mm=self.spn_diam_int.value(),
             altura_mm=self.spn_altura.value(),
-            masa_propelente_g=masa,
+            masa_propelente_g=self.spn_masa.value(),
             temp_amb_c=self.spn_temp.value(),
             humedad_pct=self.spn_humedad.value(),
             geometria_grano=self.combo_geometria.currentText(),
