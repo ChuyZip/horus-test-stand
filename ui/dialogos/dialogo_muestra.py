@@ -2,23 +2,26 @@
 
 Estilos y layout optimizados para instrumentación aeroespacial (Horus Space Lab):
 - Etiquetas (QLabel) con color explícito visible (#FFFFFF, 13px, font-weight: 500).
-- Campos de entrada (QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit) con:
+- Campos de entrada (QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox) con:
     * min-height: 28px, height: 32px (sin corte vertical de texto).
     * padding: 4px 8px.
     * background-color: #352F7E (alto contraste sobre tarjeta #2A2566).
     * color: #FFFFFF.
     * border: 1px solid rgba(255, 255, 255, 0.2).
     * border-radius: 6px.
-- QFormLayout limpio con verticalSpacing >= 10px (12px) y horizontalSpacing: 18px.
-- 11 campos reglamentarios con validaciones físicas y balísticas completas.
+- QFormLayout limpio con verticalSpacing: 10px y horizontalSpacing: 18px.
+- Contenedor en QScrollArea con barra horizontal desactivada y barra vertical estilizada.
+- 13 campos reglamentarios (incluyendo Geometría de Grano y Cluster de Motores).
 """
 
 from __future__ import annotations
 
-from typing import Optional
+from dataclasses import asdict
+from typing import Any, Optional
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QDateEdit,
     QDialog,
     QDoubleSpinBox,
@@ -30,6 +33,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -43,21 +47,45 @@ from estilo.tema import (
     COLOR_VERDE_NEON,
 )
 
+GEOMETRIAS_GRANO = [
+    "BATES (Cilíndrico con núcleo perforado)",
+    "Finocyl (Núcleo estrellado / aletas)",
+    "End-Burning (Combustión frontal / cigarrillo)",
+    "C-Slot (Ranura en C)",
+    "Moon Burner (Núcleo excéntrico)",
+    "Tubular / Externo-Interno",
+]
+
+CONFIGURACIONES_CLUSTER = [
+    "1x (Motor individual / Monomotor)",
+    "2x (Cluster dual)",
+    "3x (Cluster triangular)",
+    "4x (Cluster cuádruple)",
+    "Personalizado (con número de motores activos)",
+]
+
 
 class DialogoMuestra(QDialog):
     """Formulario modal de Ficha Técnica de la Muestra / Motor cohete."""
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        meta_inicial: Optional[EnsayoMetadata] = None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Ficha Técnica de la Muestra / Motor - Horus Space Lab")
-        self.setMinimumSize(660, 720)
-        self.resize(720, 760)
+        self.setMinimumSize(680, 760)
+        self.resize(740, 820)
         self.setModal(True)
 
         self.metadata_resultado: Optional[EnsayoMetadata] = None
+        self._meta_inicial = meta_inicial
 
         self._aplicar_estilos()
         self._construir_ui()
+        if self._meta_inicial:
+            self._cargar_datos_iniciales(self._meta_inicial)
 
     def _aplicar_estilos(self) -> None:
         """Aplica hoja de estilos con alto contraste y dimensiones cómodas para inputs."""
@@ -97,7 +125,7 @@ class DialogoMuestra(QDialog):
             /* ===================================================
                CAMPOS DE ENTRADA (ALTO CONTRASTE #352F7E)
                =================================================== */
-            QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit {{
+            QLineEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {{
                 background-color: #352F7E;
                 color: #FFFFFF;
                 border: 1px solid rgba(255, 255, 255, 0.2);
@@ -111,8 +139,53 @@ class DialogoMuestra(QDialog):
                 selection-color: #FFFFFF;
             }}
 
-            QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus {{
+            QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QComboBox:focus {{
                 border: 1px solid {COLOR_CIAN};
+                background-color: #3E3793;
+            }}
+
+            /* Estilos específicos de QComboBox */
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 26px;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+                border-top-right-radius: 6px;
+                border-bottom-right-radius: 6px;
+                background: rgba(255, 255, 255, 0.05);
+            }}
+
+            QComboBox::drop-down:hover {{
+                background: rgba(255, 255, 255, 0.18);
+            }}
+
+            QComboBox::down-arrow {{
+                image: none;
+                width: 0px;
+                height: 0px;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid #FFFFFF;
+                margin-right: 2px;
+            }}
+
+            QComboBox QAbstractItemView {{
+                background-color: #2A2566;
+                color: #FFFFFF;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 6px;
+                selection-background-color: #0D6EFD;
+                selection-color: #FFFFFF;
+                outline: none;
+                padding: 4px;
+            }}
+
+            QComboBox QAbstractItemView::item {{
+                min-height: 28px;
+                padding: 4px 8px;
+            }}
+
+            QComboBox QAbstractItemView::item:hover {{
                 background-color: #3E3793;
             }}
 
@@ -234,7 +307,7 @@ class DialogoMuestra(QDialog):
         )
 
         lbl_desc = QLabel(
-            "Caracterización geométrica, masa de propelente y condiciones ambientales de ensayo."
+            "Caracterización geométrica, configuración cluster, masa de propelente y condiciones ambientales de ensayo."
         )
         lbl_desc.setStyleSheet(f"color: {COLOR_TEXTO_MUTED}; font-size: 12px; font-weight: 500;")
 
@@ -243,17 +316,20 @@ class DialogoMuestra(QDialog):
         layout_raiz.addLayout(vbox_encabezado)
 
         # -------------------------------------------------------------
-        # 2. CONTENEDOR CON SCROLL
+        # 2. CONTENEDOR CON SCROLL (SIN BARRA HORIZONTAL)
         # -------------------------------------------------------------
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.setStyleSheet("background: transparent;")
 
         widget_tarjeta = QFrame()
         widget_tarjeta.setObjectName("TarjetaFormulario")
+        widget_tarjeta.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
-        # QFormLayout limpio con verticalSpacing >= 10px (10px exactos conforme a especificación)
+        # QFormLayout limpio con verticalSpacing: 10px y horizontalSpacing: 18px
         form = QFormLayout(widget_tarjeta)
         form.setContentsMargins(20, 16, 20, 16)
         form.setVerticalSpacing(10)
@@ -277,6 +353,35 @@ class DialogoMuestra(QDialog):
         self.spn_vejez.setRange(0, 3650)
         self.spn_vejez.setValue(7)
         self.spn_vejez.setSuffix(" días")
+
+        # Campo A: Tipo de Geometría de Grano (QComboBox estilizado)
+        self.combo_geometria = QComboBox()
+        self.combo_geometria.addItems(GEOMETRIAS_GRANO)
+        self.combo_geometria.setCurrentText("BATES (Cilíndrico con núcleo perforado)")
+
+        # Campo B: Configuración Cluster de Motores (QComboBox + QSpinBox descriptivo para personalizado)
+        self.combo_cluster = QComboBox()
+        self.combo_cluster.addItems(CONFIGURACIONES_CLUSTER)
+        self.combo_cluster.setCurrentIndex(0)
+
+        self.spn_cluster_personalizado = QSpinBox()
+        self.spn_cluster_personalizado.setRange(1, 64)
+        self.spn_cluster_personalizado.setValue(5)
+        self.spn_cluster_personalizado.setPrefix("N = ")
+        self.spn_cluster_personalizado.setSuffix(" motores")
+        self.spn_cluster_personalizado.setVisible(False)
+
+        def _al_cambiar_cluster(texto: str) -> None:
+            self.spn_cluster_personalizado.setVisible("Personalizado" in texto)
+
+        self.combo_cluster.currentTextChanged.connect(_al_cambiar_cluster)
+
+        widget_cluster = QWidget()
+        layout_cluster = QHBoxLayout(widget_cluster)
+        layout_cluster.setContentsMargins(0, 0, 0, 0)
+        layout_cluster.setSpacing(8)
+        layout_cluster.addWidget(self.combo_cluster, 3)
+        layout_cluster.addWidget(self.spn_cluster_personalizado, 2)
 
         self.spn_diam_ext = QDoubleSpinBox()
         self.spn_diam_ext.setDecimals(1)
@@ -317,12 +422,14 @@ class DialogoMuestra(QDialog):
         self.txt_composicion = QLineEdit("KNSB 65/35 (Nitrato de Potasio / Sorbitol)")
         self.txt_composicion.setPlaceholderText("Ej. APCP 70/15/15 o KNDX")
 
-        # Lista reglamentaria de 11 campos con etiquetas claras en la columna izquierda
+        # Lista reglamentaria de 13 campos con etiquetas claras en la columna izquierda
         campos = [
             ("ID de Muestra", self.txt_id),
             ("Operador(es)", self.txt_operadores),
             ("Fecha de Ensayo", self.date_fecha),
             ("Días de Vejez", self.spn_vejez),
+            ("Tipo de Geometría de Grano", self.combo_geometria),
+            ("Configuración Cluster de Motores", widget_cluster),
             ("Diámetro Exterior (mm)", self.spn_diam_ext),
             ("Diámetro Interior (mm)", self.spn_diam_int),
             ("Altura / Longitud (mm)", self.spn_altura),
@@ -363,6 +470,78 @@ class DialogoMuestra(QDialog):
 
         layout_raiz.addLayout(fila_btn)
 
+    def _obtener_valor_cluster(self) -> str:
+        """Determina el descriptor del cluster según la opción seleccionada."""
+        texto = self.combo_cluster.currentText()
+        if "Personalizado" in texto:
+            return f"Personalizado ({self.spn_cluster_personalizado.value()}x)"
+        return texto
+
+    def obtener_datos(self) -> dict[str, Any]:
+        """Retorna los datos del formulario como diccionario serializable."""
+        if self.metadata_resultado:
+            return asdict(self.metadata_resultado)
+        return {
+            "codigo_ensayo": self.txt_id.text().strip(),
+            "operadores": self.txt_operadores.text().strip(),
+            "fecha": self.date_fecha.date().toString("yyyy-MM-dd"),
+            "dias_vejez": self.spn_vejez.value(),
+            "diam_ext_mm": self.spn_diam_ext.value(),
+            "diam_int_mm": self.spn_diam_int.value(),
+            "altura_mm": self.spn_altura.value(),
+            "masa_propelente_g": self.spn_masa.value(),
+            "temp_amb_c": self.spn_temp.value(),
+            "humedad_pct": self.spn_humedad.value(),
+            "geometria_grano": self.combo_geometria.currentText(),
+            "cluster_motores": self._obtener_valor_cluster(),
+            "notas": self.txt_composicion.text().strip(),
+        }
+
+    @property
+    def datos(self) -> dict[str, Any]:
+        """Propiedad de conveniencia para acceder al diccionario de resultados."""
+        return self.obtener_datos()
+
+    def _cargar_datos_iniciales(self, meta: EnsayoMetadata) -> None:
+        """Precarga los datos de un ensayo existente en los campos del formulario."""
+        if meta.codigo_ensayo:
+            self.txt_id.setText(meta.codigo_ensayo)
+        if meta.operadores:
+            self.txt_operadores.setText(meta.operadores)
+        if meta.fecha:
+            f = QDate.fromString(meta.fecha[:10], "yyyy-MM-dd")
+            if f.isValid():
+                self.date_fecha.setDate(f)
+        self.spn_vejez.setValue(meta.dias_vejez)
+        if meta.diam_ext_mm > 0:
+            self.spn_diam_ext.setValue(meta.diam_ext_mm)
+        if meta.diam_int_mm >= 0:
+            self.spn_diam_int.setValue(meta.diam_int_mm)
+        if meta.altura_mm > 0:
+            self.spn_altura.setValue(meta.altura_mm)
+        if meta.masa_propelente_g > 0:
+            self.spn_masa.setValue(meta.masa_propelente_g)
+        self.spn_temp.setValue(meta.temp_amb_c)
+        self.spn_humedad.setValue(meta.humedad_pct)
+        if meta.notas:
+            self.txt_composicion.setText(meta.notas)
+
+        # Geometría de grano
+        idx_geom = self.combo_geometria.findText(meta.geometria_grano)
+        if idx_geom >= 0:
+            self.combo_geometria.setCurrentIndex(idx_geom)
+        else:
+            self.combo_geometria.setCurrentText(meta.geometria_grano)
+
+        # Configuración cluster de motores
+        cluster_str = str(meta.cluster_motores)
+        idx_cluster = self.combo_cluster.findText(cluster_str)
+        if idx_cluster >= 0:
+            self.combo_cluster.setCurrentIndex(idx_cluster)
+        elif "Personalizado" in cluster_str:
+            self.combo_cluster.setCurrentIndex(4)
+            self.spn_cluster_personalizado.setValue(meta.num_motores)
+
     def _validar_y_guardar(self) -> None:
         """Aplica validaciones balísticas y geométricas antes de aceptar."""
         codigo = self.txt_id.text().strip()
@@ -401,6 +580,8 @@ class DialogoMuestra(QDialog):
             masa_propelente_g=masa,
             temp_amb_c=self.spn_temp.value(),
             humedad_pct=self.spn_humedad.value(),
+            geometria_grano=self.combo_geometria.currentText(),
+            cluster_motores=self._obtener_valor_cluster(),
             notas=self.txt_composicion.text().strip(),
         )
         self.accept()

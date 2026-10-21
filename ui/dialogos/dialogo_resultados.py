@@ -77,7 +77,11 @@ class DialogoResultados(QDialog):
         lbl_tit.setStyleSheet(
             f"color: {COLOR_TEXTO_PRINCIPAL}; font-size: 17px; font-weight: 900; letter-spacing: 1.2px;"
         )
-        lbl_sub = QLabel(f"Código: {self.meta.codigo_ensayo} • Operadores: {self.meta.operadores}")
+        geom = getattr(self.meta, "geometria_grano", "BATES")
+        cluster = getattr(self.meta, "cluster_motores", "1x")
+        lbl_sub = QLabel(
+            f"Código: {self.meta.codigo_ensayo} • Operadores: {self.meta.operadores} • Grano: {geom} • Cluster: {cluster}"
+        )
         lbl_sub.setStyleSheet(f"color: {COLOR_TEXTO_MUTED}; font-size: 12px; font-weight: 600;")
         layout.addWidget(lbl_tit)
         layout.addWidget(lbl_sub)

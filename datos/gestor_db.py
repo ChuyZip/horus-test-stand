@@ -28,6 +28,8 @@ class EnsayoMetadata:
     masa_propelente_g: float = 0.0
     temp_amb_c: float = 20.0
     humedad_pct: float = 50.0
+    geometria_grano: str = "BATES (Cilíndrico con núcleo perforado)"
+    cluster_motores: str | int = "1x (Motor individual / Monomotor)"
     empuje_pico_n: float = 0.0
     empuje_prom_n: float = 0.0
     impulso_total_ns: float = 0.0
@@ -40,6 +42,17 @@ class EnsayoMetadata:
     def __post_init__(self) -> None:
         if not self.fecha:
             self.fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    @property
+    def num_motores(self) -> int:
+        """Número entero de motores activos en la configuración cluster."""
+        if isinstance(self.cluster_motores, int):
+            return max(1, self.cluster_motores)
+        import re
+        match = re.search(r"(\d+)", str(self.cluster_motores))
+        if match:
+            return max(1, int(match.group(1)))
+        return 1
 
 
 class GestorBD:
@@ -77,6 +90,8 @@ class GestorBD:
                     masa_propelente_g REAL DEFAULT 0.0,
                     temp_amb_c REAL DEFAULT 20.0,
                     humedad_pct REAL DEFAULT 50.0,
+                    geometria_grano TEXT DEFAULT 'BATES (Cilíndrico con núcleo perforado)',
+                    cluster_motores TEXT DEFAULT '1x (Motor individual / Monomotor)',
                     empuje_pico_n REAL DEFAULT 0.0,
                     empuje_prom_n REAL DEFAULT 0.0,
                     impulso_total_ns REAL DEFAULT 0.0,
@@ -88,6 +103,18 @@ class GestorBD:
                 );
                 """
             )
+
+            # Migración automática si la tabla ya existía sin las nuevas columnas
+            cur.execute("PRAGMA table_info(ensayos);")
+            columnas = [col["name"] for col in cur.fetchall()]
+            if "geometria_grano" not in columnas:
+                cur.execute(
+                    "ALTER TABLE ensayos ADD COLUMN geometria_grano TEXT DEFAULT 'BATES (Cilíndrico con núcleo perforado)';"
+                )
+            if "cluster_motores" not in columnas:
+                cur.execute(
+                    "ALTER TABLE ensayos ADD COLUMN cluster_motores TEXT DEFAULT '1x (Motor individual / Monomotor)';"
+                )
 
             cur.execute(
                 """
@@ -124,10 +151,11 @@ class GestorBD:
                 INSERT INTO ensayos (
                     codigo_ensayo, fecha, operadores, dias_vejez,
                     diam_ext_mm, diam_int_mm, altura_mm, masa_propelente_g,
-                    temp_amb_c, humedad_pct, empuje_pico_n, empuje_prom_n,
+                    temp_amb_c, humedad_pct, geometria_grano, cluster_motores,
+                    empuje_pico_n, empuje_prom_n,
                     impulso_total_ns, isp_s, tiempo_quemado_s,
                     velocidad_quemado_mm_s, clase_nakka, notas
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
                 """,
                 (
                     meta.codigo_ensayo,
@@ -140,6 +168,8 @@ class GestorBD:
                     meta.masa_propelente_g,
                     meta.temp_amb_c,
                     meta.humedad_pct,
+                    str(meta.geometria_grano),
+                    str(meta.cluster_motores),
                     meta.empuje_pico_n,
                     meta.empuje_prom_n,
                     meta.impulso_total_ns,
@@ -233,6 +263,8 @@ class GestorBD:
             writer.writerow(["# Fecha", ensayo["fecha"]])
             writer.writerow(["# Operadores", ensayo["operadores"]])
             writer.writerow(["# Dias de Vejez", ensayo["dias_vejez"]])
+            writer.writerow(["# Geometria Grano", ensayo.get("geometria_grano") or "BATES (Cilíndrico con núcleo perforado)"])
+            writer.writerow(["# Cluster Motores", ensayo.get("cluster_motores") or "1x (Motor individual / Monomotor)"])
             writer.writerow(["# Masa Propelente (g)", ensayo["masa_propelente_g"]])
             writer.writerow(["# Empuje Pico (N)", ensayo["empuje_pico_n"]])
             writer.writerow(["# Empuje Promedio (N)", ensayo["empuje_prom_n"]])

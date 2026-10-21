@@ -183,7 +183,7 @@ class VistaPrueba(QWidget):
         col_botones = QVBoxLayout()
         col_botones.setSpacing(4)
 
-        self.btn_muestra = QPushButton("📋 CARACTERIZAR MUESTRA")
+        self.btn_muestra = QPushButton("📋 DATOS DE LA MUESTRA")
         self.btn_muestra.setStyleSheet(
             f"background: #1C3B68; color: #FFFFFF; border: 1px solid {COLOR_CIAN}; border-radius: 6px; padding: 5px 12px; font-weight: 800; font-size: 11px;"
         )
@@ -359,13 +359,16 @@ class VistaPrueba(QWidget):
             self.btn_reiniciar.setEnabled(True)
 
     def _abrir_formulario_muestra(self) -> None:
-        dlg = DialogoMuestra(self)
+        dlg = DialogoMuestra(self, meta_inicial=self.meta_actual)
         if dlg.exec():
             self.meta_actual = dlg.metadata_resultado
             QMessageBox.information(
                 self,
                 "Muestra Registrada",
-                f"Ensayo '{self.meta_actual.codigo_ensayo}' preparado.\nEl sistema ya está listo para armar e iniciar.",
+                f"Ensayo '{self.meta_actual.codigo_ensayo}' preparado.\n"
+                f"• Geometría: {self.meta_actual.geometria_grano}\n"
+                f"• Cluster: {self.meta_actual.cluster_motores}\n\n"
+                "El sistema ya está listo para armar e iniciar.",
             )
             self._actualizar_botones_por_estado(EstadoInstrumentacion.LISTO)
 
