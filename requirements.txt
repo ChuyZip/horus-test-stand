@@ -3,3 +3,4 @@ pyqtgraph>=0.13.0
 pyserial>=3.5
 numpy>=1.22.0
 scipy>=1.10.0
+pyinstaller>=6.0.0
