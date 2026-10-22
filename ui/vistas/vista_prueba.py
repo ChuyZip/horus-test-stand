@@ -21,7 +21,7 @@ from typing import Optional
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 from comunicacion.base import CanalDAQ
 from comunicacion.simulador import SimuladorMotorCohete
 from core.balistica import MetricasBalisticas, calcular_metricas_balisticas
-from core.procesador_senal import ProcesadorSenal
+from core.procesador_senal import BuferPreTrigger, MuestraProcesada, ProcesadorSenal
 from datos.gestor_db import EnsayoMetadata, GestorBD
 from estilo.tema import (
     COLOR_ACENTO_CRITICO,
@@ -126,6 +126,13 @@ class VistaPrueba(QWidget):
         # Metadatos del ensayo en curso
         self.meta_actual: Optional[EnsayoMetadata] = None
         self._tiempo_ignicion_detectado: Optional[float] = None
+        self._t0_ignicion: Optional[float] = None
+        self._ignicion_confirmada: bool = False
+        self._comando_fire_emitido: bool = False
+        self._estado_actual: EstadoInstrumentacion = EstadoInstrumentacion.LISTO
+
+        # Búfer pre-trigger circular continuo (para estado ARMADO / CUENTA REGRESIVA)
+        self.bufer_pretrigger: BuferPreTrigger = self.procesador.bufer_pretrigger
 
         # Búferes circulares de alta velocidad
         self.max_muestras = 6000
@@ -237,6 +244,24 @@ class VistaPrueba(QWidget):
         pen_filt = pg.mkPen(color=COLOR_CIAN, width=2.2)
         self.curva_volt_filt = self.plot_voltaje.plot(pen=pen_filt, name="Filtrada")
 
+        # Mira (Crosshair) y Tooltip interactivo para Voltaje
+        self.crosshair_v_voltaje = pg.InfiniteLine(
+            angle=90, movable=False, pen=pg.mkPen(color=QColor(255, 255, 255, 75), width=1.0, style=Qt.PenStyle.DashLine)
+        )
+        self.crosshair_h_voltaje = pg.InfiniteLine(
+            angle=0, movable=False, pen=pg.mkPen(color=QColor(255, 255, 255, 55), width=1.0, style=Qt.PenStyle.DotLine)
+        )
+        self.tooltip_voltaje = pg.TextItem(color="#FFFFFF", anchor=(0, 1))
+        self.tooltip_voltaje.setZValue(1000)
+        self.crosshair_v_voltaje.hide()
+        self.crosshair_h_voltaje.hide()
+        self.tooltip_voltaje.hide()
+        self.plot_voltaje.addItem(self.crosshair_v_voltaje, ignoreBounds=True)
+        self.plot_voltaje.addItem(self.crosshair_h_voltaje, ignoreBounds=True)
+        self.plot_voltaje.addItem(self.tooltip_voltaje, ignoreBounds=True)
+        self.plot_voltaje.scene().sigMouseMoved.connect(lambda pos: self._al_mover_cursor(pos, "voltaje"))
+        self.plot_voltaje.viewport().installEventFilter(self)
+
         col_izq.addWidget(self.plot_voltaje, 1)
 
         # Checkbox para alternar señal cruda
@@ -257,6 +282,25 @@ class VistaPrueba(QWidget):
             fillBrush=pg.mkBrush(255, 145, 0, 55),
             name="Impulso Acumulado",
         )
+
+        # Mira (Crosshair) y Tooltip interactivo para Impulso
+        self.crosshair_v_impulso = pg.InfiniteLine(
+            angle=90, movable=False, pen=pg.mkPen(color=QColor(255, 255, 255, 75), width=1.0, style=Qt.PenStyle.DashLine)
+        )
+        self.crosshair_h_impulso = pg.InfiniteLine(
+            angle=0, movable=False, pen=pg.mkPen(color=QColor(255, 255, 255, 55), width=1.0, style=Qt.PenStyle.DotLine)
+        )
+        self.tooltip_impulso = pg.TextItem(color="#FFFFFF", anchor=(0, 1))
+        self.tooltip_impulso.setZValue(1000)
+        self.crosshair_v_impulso.hide()
+        self.crosshair_h_impulso.hide()
+        self.tooltip_impulso.hide()
+        self.plot_impulso.addItem(self.crosshair_v_impulso, ignoreBounds=True)
+        self.plot_impulso.addItem(self.crosshair_h_impulso, ignoreBounds=True)
+        self.plot_impulso.addItem(self.tooltip_impulso, ignoreBounds=True)
+        self.plot_impulso.scene().sigMouseMoved.connect(lambda pos: self._al_mover_cursor(pos, "impulso"))
+        self.plot_impulso.viewport().installEventFilter(self)
+
         col_izq.addWidget(self.plot_impulso, 1)
 
         layout_graficas.addLayout(col_izq, 46)
@@ -281,12 +325,30 @@ class VistaPrueba(QWidget):
         self.linea_ignicion = pg.InfiniteLine(
             pos=0.0,
             angle=90,
-            pen=pg.mkPen(color="#FF5252", width=1.5, style=Qt.PenStyle.DashLine),
-            label="Ignición",
+            pen=pg.mkPen(color="#FF5252", width=1.6, style=Qt.PenStyle.DashLine),
+            label="Ignición / T-0",
             labelOpts={"position": 0.85, "color": "#FF5252", "fill": (31, 27, 78, 200)},
         )
         self.linea_ignicion.hide()
         self.plot_empuje.addItem(self.linea_ignicion)
+
+        # Mira (Crosshair) y Tooltip interactivo para Empuje
+        self.crosshair_v_empuje = pg.InfiniteLine(
+            angle=90, movable=False, pen=pg.mkPen(color=QColor(255, 255, 255, 75), width=1.0, style=Qt.PenStyle.DashLine)
+        )
+        self.crosshair_h_empuje = pg.InfiniteLine(
+            angle=0, movable=False, pen=pg.mkPen(color=QColor(255, 255, 255, 55), width=1.0, style=Qt.PenStyle.DotLine)
+        )
+        self.tooltip_empuje = pg.TextItem(color="#FFFFFF", anchor=(0, 1))
+        self.tooltip_empuje.setZValue(1000)
+        self.crosshair_v_empuje.hide()
+        self.crosshair_h_empuje.hide()
+        self.tooltip_empuje.hide()
+        self.plot_empuje.addItem(self.crosshair_v_empuje, ignoreBounds=True)
+        self.plot_empuje.addItem(self.crosshair_h_empuje, ignoreBounds=True)
+        self.plot_empuje.addItem(self.tooltip_empuje, ignoreBounds=True)
+        self.plot_empuje.scene().sigMouseMoved.connect(lambda pos: self._al_mover_cursor(pos, "empuje"))
+        self.plot_empuje.viewport().installEventFilter(self)
 
         # Marcador dinámico del pico de empuje
         self.marcador_pico = pg.ScatterPlotItem(
@@ -392,8 +454,137 @@ class VistaPrueba(QWidget):
 
     def _al_cambiar_estado(self, estado: object) -> None:
         if isinstance(estado, EstadoInstrumentacion):
+            self._estado_actual = estado
             self._actualizar_botones_por_estado(estado)
         self.estado_cambiado.emit(estado)
+
+    def disparar_ignicion_manual(self) -> None:
+        """Fuerza la detección de ignición (comando manual FIRE)."""
+        self._comando_fire_emitido = True
+
+    def eventFilter(self, watched: object, event: object) -> bool:
+        if event.type() == QEvent.Type.Leave:
+            if hasattr(self, "plot_empuje") and watched in (self.plot_empuje, self.plot_empuje.viewport()):
+                self._ocultar_crosshair("empuje")
+            elif hasattr(self, "plot_voltaje") and watched in (self.plot_voltaje, self.plot_voltaje.viewport()):
+                self._ocultar_crosshair("voltaje")
+            elif hasattr(self, "plot_impulso") and watched in (self.plot_impulso, self.plot_impulso.viewport()):
+                self._ocultar_crosshair("impulso")
+        return super().eventFilter(watched, event)
+
+    def _ocultar_crosshair(self, tipo: str) -> None:
+        """Oculta la mira y el tooltip flotante de la gráfica especificada."""
+        if tipo == "empuje" and hasattr(self, "crosshair_v_empuje"):
+            self.crosshair_v_empuje.hide()
+            self.crosshair_h_empuje.hide()
+            self.tooltip_empuje.hide()
+        elif tipo == "voltaje" and hasattr(self, "crosshair_v_voltaje"):
+            self.crosshair_v_voltaje.hide()
+            self.crosshair_h_voltaje.hide()
+            self.tooltip_voltaje.hide()
+        elif tipo == "impulso" and hasattr(self, "crosshair_v_impulso"):
+            self.crosshair_v_impulso.hide()
+            self.crosshair_h_impulso.hide()
+            self.tooltip_impulso.hide()
+
+    def _al_mover_cursor(self, pos: object, tipo: str) -> None:
+        """Lee la posición del cursor, busca la muestra más cercana y renderiza mira y tooltip."""
+        if not hasattr(pos, "x"):
+            return
+
+        if tipo == "empuje":
+            plot = self.plot_empuje
+            v_line = self.crosshair_v_empuje
+            h_line = self.crosshair_h_empuje
+            tooltip = self.tooltip_empuje
+        elif tipo == "voltaje":
+            plot = self.plot_voltaje
+            v_line = self.crosshair_v_voltaje
+            h_line = self.crosshair_h_voltaje
+            tooltip = self.tooltip_voltaje
+        elif tipo == "impulso":
+            plot = self.plot_impulso
+            v_line = self.crosshair_v_impulso
+            h_line = self.crosshair_h_impulso
+            tooltip = self.tooltip_impulso
+        else:
+            return
+
+        vb = plot.plotItem.vb
+        # 1. Comprobar si el cursor está dentro del área visible del ViewBox
+        if not vb.sceneBoundingRect().contains(pos):
+            self._ocultar_crosshair(tipo)
+            return
+
+        # 2. Si no hay datos registrados, ocultar mira
+        if not self.buf_tiempo or len(self.buf_tiempo) == 0:
+            self._ocultar_crosshair(tipo)
+            return
+
+        # 3. Mapear coordenadas de la escena a unidades de datos del ViewBox
+        mouse_point = vb.mapSceneToView(pos)
+        x_mouse = mouse_point.x()
+
+        # 4. Búsqueda binaria O(log N) del punto temporal más cercano
+        tiempos = np.asarray(self.buf_tiempo)
+        idx = int(np.searchsorted(tiempos, x_mouse))
+        if idx == 0:
+            idx_cercano = 0
+        elif idx >= len(tiempos):
+            idx_cercano = len(tiempos) - 1
+        else:
+            if abs(tiempos[idx] - x_mouse) < abs(tiempos[idx - 1] - x_mouse):
+                idx_cercano = idx
+            else:
+                idx_cercano = idx - 1
+
+        t_val = float(tiempos[idx_cercano])
+
+        # 5. Formateo exacto de coordenadas según gráfica
+        if tipo == "empuje":
+            f_val = float(self.buf_empuje_filt[idx_cercano]) if idx_cercano < len(self.buf_empuje_filt) else 0.0
+            texto = f"Tiempo: {t_val:.3f} s | Empuje: {f_val:.2f} N"
+            y_val = f_val
+        elif tipo == "voltaje":
+            v_raw = float(self.buf_volt_crudo[idx_cercano]) if idx_cercano < len(self.buf_volt_crudo) else 0.0
+            v_filt = float(self.buf_volt_filt[idx_cercano]) if idx_cercano < len(self.buf_volt_filt) else 0.0
+            texto = f"Tiempo: {t_val:.3f} s | V_raw: {v_raw:.3f} V | V_filt: {v_filt:.3f} V"
+            y_val = v_filt
+        else:  # impulso
+            j_val = float(self.buf_impulso[idx_cercano]) if idx_cercano < len(self.buf_impulso) else 0.0
+            texto = f"Tiempo: {t_val:.3f} s | Impulso: {j_val:.3f} N·s"
+            y_val = j_val
+
+        # Posicionar cruz
+        v_line.setPos(t_val)
+        h_line.setPos(y_val)
+        v_line.show()
+        h_line.show()
+
+        # Ajuste dinámico de ancla para evitar desbordes en los bordes
+        view_range = vb.viewRange()
+        x_min, x_max = view_range[0]
+        y_min, y_max = view_range[1]
+        x_mid = (x_min + x_max) / 2.0
+        y_mid = (y_min + y_max) / 2.0
+
+        anchor_x = 1.05 if mouse_point.x() > x_mid else -0.05
+        anchor_y = -0.10 if mouse_point.y() > y_mid else 1.10
+        tooltip.setAnchor((anchor_x, anchor_y))
+
+        # Estilo visual de la paleta (#2A2566, borde blanco translúcido, texto #FFFFFF)
+        html = (
+            f"<div style='background-color: #2A2566; "
+            f"border: 1px solid rgba(255, 255, 255, 0.40); "
+            f"border-radius: 4px; padding: 4px 8px; "
+            f"font-family: Menlo, Consolas, monospace; font-size: 11px; font-weight: bold; "
+            f"color: #FFFFFF; white-space: nowrap;'>"
+            f"{texto}"
+            f"</div>"
+        )
+        tooltip.setHtml(html)
+        tooltip.setPos(t_val, y_val)
+        tooltip.show()
 
     def _alerta_seguridad(self, mensaje: str) -> None:
         QMessageBox.warning(self, "Alerta de Seguridad DAQ", mensaje)
@@ -407,24 +598,101 @@ class VistaPrueba(QWidget):
 
         ultima_m = None
         for t, v in muestras:
-            m = self.procesador.procesar_muestra(t, v)
-            self.buf_tiempo.append(m.tiempo)
-            self.buf_empuje_filt.append(m.empuje_filtrado)
-            self.buf_volt_crudo.append(m.voltaje_crudo)
-            self.buf_volt_filt.append(m.voltaje_filtrado)
-            self.buf_impulso.append(m.impulso_acumulado)
+            v_filt = self.procesador.filtro.filtrar(v)
+            f_crudo = self.procesador.calibrador.voltaje_a_newtons(v)
+            f_filt = self.procesador.calibrador.voltaje_a_newtons(v_filt)
 
-            # Detección del instante de ignición (primera vez que supera 15 N)
-            if self._tiempo_ignicion_detectado is None and m.empuje_filtrado >= 15.0:
-                self._tiempo_ignicion_detectado = m.tiempo
-                self.linea_ignicion.setValue(m.tiempo)
-                self.linea_ignicion.show()
+            if not self._ignicion_confirmada:
+                # 1. Condición de disparo de ignición (fuerza >= 15.0 N o trigger forzado / comando FIRE)
+                es_trigger = (
+                    f_filt >= 15.0
+                    or self._comando_fire_emitido
+                    or (self._estado_actual == EstadoInstrumentacion.GRABANDO and f_filt >= 5.0)
+                )
 
-            if m.empuje_filtrado > self.empuje_pico_actual:
-                self.empuje_pico_actual = m.empuje_filtrado
-                self.tiempo_pico_actual = m.tiempo
+                if es_trigger:
+                    self._ignicion_confirmada = True
+                    self._t0_ignicion = t
+                    self._tiempo_ignicion_detectado = 0.0
 
-            ultima_m = m
+                    # 2. Volcar muestras del búfer previo con tiempos relativos negativos (ej. -1.0 s a 0.0 s)
+                    muestras_pre = self.bufer_pretrigger.volcar(tiempo_ignicion=t)
+                    for m_pre in muestras_pre:
+                        self.buf_tiempo.append(m_pre.tiempo)
+                        self.buf_empuje_filt.append(m_pre.empuje_filtrado)
+                        self.buf_volt_crudo.append(m_pre.voltaje_crudo)
+                        self.buf_volt_filt.append(m_pre.voltaje_filtrado)
+                        self.buf_impulso.append(0.0)
+
+                    # 3. Muestra en el instante exacto de ignición T-0 (t = 0.0 s)
+                    self.procesador.integrador.reiniciar()
+                    imp = self.procesador.integrador.actualizar(0.0, f_filt)
+                    self.buf_tiempo.append(0.0)
+                    self.buf_empuje_filt.append(f_filt)
+                    self.buf_volt_crudo.append(v)
+                    self.buf_volt_filt.append(v_filt)
+                    self.buf_impulso.append(imp)
+
+                    self.empuje_pico_actual = f_filt
+                    self.tiempo_pico_actual = 0.0
+
+                    # Línea vertical discontinua en t = 0.0 s
+                    self.linea_ignicion.setValue(0.0)
+                    self.linea_ignicion.show()
+
+                    ultima_m = MuestraProcesada(
+                        tiempo=0.0,
+                        voltaje_crudo=v,
+                        voltaje_filtrado=v_filt,
+                        empuje_crudo=f_crudo,
+                        empuje_filtrado=f_filt,
+                        impulso_acumulado=imp,
+                        empuje_maximo=f_filt,
+                        tiempo_pico=0.0,
+                    )
+                else:
+                    # Almacenar en búfer circular continuo previo a ignición
+                    self.bufer_pretrigger.agregar(
+                        tiempo=t,
+                        voltaje_crudo=v,
+                        voltaje_filtrado=v_filt,
+                        empuje_crudo=f_crudo,
+                        empuje_filtrado=f_filt,
+                    )
+            else:
+                # Ya en fase de ignición/combustión activa (t >= 0.0 s)
+                t_rel = round(t - self._t0_ignicion, 4)
+                imp = self.procesador.integrador.actualizar(t_rel, f_filt)
+
+                self.buf_tiempo.append(t_rel)
+                self.buf_empuje_filt.append(f_filt)
+                self.buf_volt_crudo.append(v)
+                self.buf_volt_filt.append(v_filt)
+                self.buf_impulso.append(imp)
+
+                if f_filt > self.empuje_pico_actual:
+                    self.empuje_pico_actual = f_filt
+                    self.tiempo_pico_actual = t_rel
+
+                ultima_m = MuestraProcesada(
+                    tiempo=t_rel,
+                    voltaje_crudo=v,
+                    voltaje_filtrado=v_filt,
+                    empuje_crudo=f_crudo,
+                    empuje_filtrado=f_filt,
+                    impulso_acumulado=imp,
+                    empuje_maximo=self.empuje_pico_actual,
+                    tiempo_pico=self.tiempo_pico_actual,
+                )
+
+        if not self._ignicion_confirmada:
+            if len(self.bufer_pretrigger) > 0:
+                m_ultima_pre = self.bufer_pretrigger._buffer[-1]
+                self.card_actual.actualizar(f"{max(0.0, m_ultima_pre.empuje_filtrado):,.1f}")
+                self.card_pico.actualizar("0.0")
+                self.card_impulso.actualizar("0.00")
+                self.card_tiempo.actualizar("0.00")
+            return
 
         if not self.buf_tiempo:
             return
@@ -536,8 +804,16 @@ class VistaPrueba(QWidget):
         self.empuje_pico_actual = 0.0
         self.tiempo_pico_actual = 0.0
         self._tiempo_ignicion_detectado = None
+        self._t0_ignicion = None
+        self._ignicion_confirmada = False
+        self._comando_fire_emitido = False
 
         self.procesador.reiniciar()
+        self.bufer_pretrigger.reiniciar()
+
+        self._ocultar_crosshair("empuje")
+        self._ocultar_crosshair("voltaje")
+        self._ocultar_crosshair("impulso")
 
         self.curva_empuje.clear()
         self.curva_volt_cruda.clear()

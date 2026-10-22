@@ -55,15 +55,9 @@ class SimuladorMotorCohete(CanalDAQ):
             self._abortado = False
 
         self.estado_cambiado.emit(EstadoInstrumentacion.ARMADO)
-        time.sleep(0.3)
-
-        if not self._activo:
-            return
-
-        self.estado_cambiado.emit(EstadoInstrumentacion.CUENTA_REGRESIVA)
-        time.sleep(0.7)
 
         tiempo_simulado = 0.0
+        fase_cuenta_regresiva_emitida = False
         fase_grabacion_iniciada = False
 
         # Bucle de alta precisión temporal con compensación de deriva
@@ -79,12 +73,17 @@ class SimuladorMotorCohete(CanalDAQ):
                     self.nueva_muestra.emit(tiempo_simulado, 0.0)
                     break
 
-            # Cambio de estado al comenzar la ignición física
+            # Transición a CUENTA REGRESIVA a los 0.30 s de reposo armado
+            if tiempo_simulado >= 0.30 and not fase_cuenta_regresiva_emitida:
+                fase_cuenta_regresiva_emitida = True
+                self.estado_cambiado.emit(EstadoInstrumentacion.CUENTA_REGRESIVA)
+
+            # Transición a GRABANDO al comenzar la ignición física (t >= 1.00 s)
             if tiempo_simulado >= self.t_inicio_ignicion and not fase_grabacion_iniciada:
                 fase_grabacion_iniciada = True
                 self.estado_cambiado.emit(EstadoInstrumentacion.GRABANDO)
 
-            # Generación de la señal de combustión
+            # Generación de la señal de combustión / reposo basal
             voltaje = self._calcular_voltaje_sintetico(tiempo_simulado)
             self.nueva_muestra.emit(round(tiempo_simulado, 4), voltaje)
 

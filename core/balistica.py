@@ -110,23 +110,33 @@ def calcular_metricas_balisticas(
     umbral_combustion = max(umbral_empuje_n, empuje_pico * 0.05)
     indices_activos = np.where(f_arr >= umbral_combustion)[0]
 
-    if len(indices_activos) > 0:
+    if len(indices_activos) > 1:
         idx_inicio = int(indices_activos[0])
         idx_fin = int(indices_activos[-1])
         t_inicio = float(t_arr[idx_inicio])
         t_fin = float(t_arr[idx_fin])
+        t_comb = t_arr[idx_inicio : idx_fin + 1]
+        f_comb = f_arr[idx_inicio : idx_fin + 1]
+    elif len(indices_activos) == 1:
+        idx = int(indices_activos[0])
+        t_inicio = float(t_arr[idx])
+        t_fin = float(t_arr[idx])
+        t_comb = t_arr
+        f_comb = f_arr
     else:
         t_inicio = float(t_arr[0])
         t_fin = float(t_arr[-1])
+        t_comb = t_arr
+        f_comb = f_arr
 
     tiempo_quemado = max(0.01, t_fin - t_inicio)
 
     # 3. Impulso total por regla trapezoidal
     # np.trapezoid en numpy 2.0+ o np.trapz en versiones previas
     if hasattr(np, "trapezoid"):
-        impulso_total = float(np.trapezoid(f_arr, t_arr))
+        impulso_total = float(np.trapezoid(f_comb, t_comb))
     else:
-        impulso_total = float(np.trapz(f_arr, t_arr))
+        impulso_total = float(np.trapz(f_comb, t_comb))
 
     impulso_total = max(0.0, impulso_total)
 

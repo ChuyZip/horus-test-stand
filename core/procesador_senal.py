@@ -9,6 +9,7 @@ Provee:
 from __future__ import annotations
 
 import math
+from collections import deque
 from dataclasses import dataclass
 from typing import Optional
 import numpy as np
@@ -26,6 +27,83 @@ class MuestraProcesada:
     impulso_acumulado: float
     empuje_maximo: float
     tiempo_pico: float
+
+
+@dataclass
+class MuestraPreTrigger:
+    """Muestra individual capturada en la ventana previa a la ignición."""
+
+    tiempo: float
+    voltaje_crudo: float
+    voltaje_filtrado: float
+    empuje_crudo: float
+    empuje_filtrado: float
+
+
+class BuferPreTrigger:
+    """Búfer circular de tamaño fijo (deque) para almacenar telemetría previa a la ignición.
+
+    Permite capturar la línea base, tara dinámica, ruido térmico del ADC y estado
+    de reposo durante los estados ARMADO y CUENTA REGRESIVA. Al dispararse la ignición,
+    vuelca todas sus muestras asignándoles marcas de tiempo negativas relativas
+    al instante T-0 (ej. de -1.00 s a 0.00 s).
+    """
+
+    def __init__(self, frecuencia_hz: float = 200.0, tiempo_pretrigger_s: float = 1.0) -> None:
+        self.frecuencia_hz = max(1.0, float(frecuencia_hz))
+        self.tiempo_pretrigger_s = max(0.05, float(tiempo_pretrigger_s))
+        self.maxlen = max(1, int(self.frecuencia_hz * self.tiempo_pretrigger_s))
+        self._buffer: deque[MuestraPreTrigger] = deque(maxlen=self.maxlen)
+
+    def agregar(
+        self,
+        tiempo: float,
+        voltaje_crudo: float,
+        voltaje_filtrado: float,
+        empuje_crudo: float,
+        empuje_filtrado: float,
+    ) -> None:
+        """Agrega una muestra continua al búfer circular."""
+        self._buffer.append(
+            MuestraPreTrigger(
+                tiempo=float(tiempo),
+                voltaje_crudo=float(voltaje_crudo),
+                voltaje_filtrado=float(voltaje_filtrado),
+                empuje_crudo=float(empuje_crudo),
+                empuje_filtrado=float(empuje_filtrado),
+            )
+        )
+
+    def volcar(self, tiempo_ignicion: float) -> list[MuestraPreTrigger]:
+        """Extrae las muestras con marcas de tiempo relativas negativas respecto a la ignición.
+
+        Ejemplo: Si tiempo_ignicion = 1.00 s y una muestra previa tiene tiempo = 0.20 s,
+        su tiempo relativo en la lista volcada será -0.80 s.
+        """
+        muestras_relativas: list[MuestraPreTrigger] = []
+        for m in self._buffer:
+            t_rel = round(m.tiempo - tiempo_ignicion, 4)
+            muestras_relativas.append(
+                MuestraPreTrigger(
+                    tiempo=t_rel,
+                    voltaje_crudo=m.voltaje_crudo,
+                    voltaje_filtrado=m.voltaje_filtrado,
+                    empuje_crudo=m.empuje_crudo,
+                    empuje_filtrado=m.empuje_filtrado,
+                )
+            )
+        return muestras_relativas
+
+    def reiniciar(self) -> None:
+        """Limpia el contenido del búfer circular."""
+        self._buffer.clear()
+
+    @property
+    def cantidad_muestras(self) -> int:
+        return len(self._buffer)
+
+    def __len__(self) -> int:
+        return len(self._buffer)
 
 
 class FiltroIIRExponencial:
@@ -145,10 +223,15 @@ class ProcesadorSenal:
         factor_n_por_v: float = 1000.0,
         alfa_filtro: float = 0.18,
         umbral_ruido_n: float = 1.0,
+        frecuencia_hz: float = 200.0,
+        tiempo_pretrigger_s: float = 1.0,
     ) -> None:
-        self.filtro = FiltroIIRExponencial(alfa=alfa_filtro)
+        self.filtro = FiltroIIRExponencial(alfa=alfa_filtro, fs=frecuencia_hz)
         self.calibrador = CalibradorFuerza(factor_n_por_v=factor_n_por_v)
         self.integrador = IntegradorImpulso(umbral_ruido_n=umbral_ruido_n)
+        self.bufer_pretrigger = BuferPreTrigger(
+            frecuencia_hz=frecuencia_hz, tiempo_pretrigger_s=tiempo_pretrigger_s
+        )
 
     def procesar_muestra(self, tiempo: float, voltaje_crudo: float) -> MuestraProcesada:
         """Ejecuta la canalización completa de procesamiento en una muestra (tiempo, V)."""
@@ -201,3 +284,4 @@ class ProcesadorSenal:
         """Limpia el estado interno para comenzar un nuevo ensayo."""
         self.filtro.reiniciar()
         self.integrador.reiniciar()
+        self.bufer_pretrigger.reiniciar()

@@ -146,8 +146,43 @@ assert dlg2.txt_operadores.styleSheet() == ESTILO_BORDE_ERROR
 dlg2.txt_id.setText("EXP-VALID-01")
 assert dlg2.txt_id.styleSheet() == ""
 
-# 2. Validación de Diámetro Interior >= Diámetro Exterior
+# 2. Validación de Fecha de Ensayo corrupta (ej. '2026--21')
 dlg2.txt_operadores.setText("Operador")
+dlg2.date_fecha.findChild(type(dlg2.date_fecha.lineEdit())).setCursorPosition(7)
+dlg2.date_fecha.findChild(type(dlg2.date_fecha.lineEdit())).backspace()
+dlg2.date_fecha.findChild(type(dlg2.date_fecha.lineEdit())).backspace()
+assert dlg2.date_fecha.text() == "2026--21"
+
+valido, errores = dlg2.validar_formulario()
+assert not valido
+assert any("Fecha de Ensayo" in e for e in errores)
+assert dlg2.date_fecha.styleSheet() == ESTILO_BORDE_ERROR
+
+# Restaurar fecha válida
+from PySide6.QtCore import QDate
+dlg2.date_fecha.setDate(QDate.currentDate())
+assert dlg2.date_fecha.text() == QDate.currentDate().toString("yyyy-MM-dd")
+
+# 3. Validación de spinbox vacío o corrupto con solo sufijo de unidad
+dlg2.spn_diam_ext.lineEdit().setText(" mm")
+valido, errores = dlg2.validar_formulario()
+assert not valido
+assert any("Diámetro Exterior" in e for e in errores)
+assert dlg2.spn_diam_ext.styleSheet() == ESTILO_BORDE_ERROR
+
+dlg2.spn_diam_ext.setValue(20.0)
+assert dlg2.spn_diam_ext.styleSheet() == ""
+
+dlg2.spn_vejez.lineEdit().setText("días")
+valido, errores = dlg2.validar_formulario()
+assert not valido
+assert any("Días de Vejez" in e for e in errores)
+assert dlg2.spn_vejez.styleSheet() == ESTILO_BORDE_ERROR
+
+dlg2.spn_vejez.setValue(10)
+assert dlg2.spn_vejez.styleSheet() == ""
+
+# 4. Validación de Diámetro Interior >= Diámetro Exterior
 dlg2.spn_diam_ext.setValue(20.0)
 dlg2.spn_diam_int.setValue(25.0)
 valido, errores = dlg2.validar_formulario()
@@ -159,7 +194,7 @@ assert dlg2.spn_diam_int.styleSheet() == ESTILO_BORDE_ERROR
 dlg2.spn_diam_int.setValue(10.0)
 assert dlg2.spn_diam_int.styleSheet() == ""
 
-# 3. Validación de Masa <= 0 y Altura <= 0
+# 5. Validación de Masa <= 0 y Altura <= 0
 dlg2.spn_masa.setValue(0.0)
 dlg2.spn_altura.setValue(0.0)
 valido, errores = dlg2.validar_formulario()
@@ -174,7 +209,7 @@ dlg2.spn_altura.setValue(100.0)
 assert dlg2.spn_masa.styleSheet() == ""
 assert dlg2.spn_altura.styleSheet() == ""
 
-# 4. Validación de Tipo / Composición de Propelente
+# 6. Validación de Tipo / Composición de Propelente
 dlg2.txt_composicion.setText("   ")
 valido, errores = dlg2.validar_formulario()
 assert not valido
@@ -184,7 +219,7 @@ assert dlg2.txt_composicion.styleSheet() == ESTILO_BORDE_ERROR
 dlg2.txt_composicion.setText("KNSB 65/35")
 assert dlg2.txt_composicion.styleSheet() == ""
 
-# 5. Formulario completamente válido
+# 7. Formulario completamente válido
 valido, errores = dlg2.validar_formulario()
 assert valido
 assert len(errores) == 0
